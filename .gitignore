@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+.env
+*.sqlite
+*.sqlite3
+data/
+.DS_Store
+coverage/

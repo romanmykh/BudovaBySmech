@@ -1,0 +1,17 @@
+{
+  "name": "budova-elektro",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Low-voltage electrical installation and distribution board simulator (CZ)",
+  "workspaces": ["packages/engine", "apps/web", "apps/server"],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/server & npm run dev --workspace=apps/web",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "build": "npm run build --workspace=packages/engine && npm run build --workspace=apps/web && npm run build --workspace=apps/server",
+    "test": "npm run test --workspace=packages/engine",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "start": "node apps/server/dist/index.js"
+  },
+  "engines": { "node": ">=20" }
+}

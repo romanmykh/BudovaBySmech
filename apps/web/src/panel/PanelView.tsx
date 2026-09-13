@@ -337,12 +337,36 @@ function DeviceModule({
       <text x={x + w / 2} y={y + 38} fontSize={9} textAnchor="middle" fill="var(--text)">
         {comp.label ?? ''}
       </text>
-      <text x={x + w / 2} y={y + 60} fontSize={8.5} textAnchor="middle" fill="var(--text-dim)">
-        {ratingText(comp.type, props)}
+      <text
+        x={x + w / 2}
+        y={y + 60}
+        fontSize={fitFontSize(panelRating(comp.type, props), w - 2)}
+        textAnchor="middle"
+        fill="var(--text-dim)"
+      >
+        {panelRating(comp.type, props)}
       </text>
       <title>{`${comp.label ?? ''} ${t(`comp.${comp.type}`)}`}</title>
     </g>
   );
+}
+
+/** Short rating for the narrow face of a modular device. */
+function panelRating(type: string, props: any): string {
+  const bits: string[] = [];
+  if (props.inA !== undefined) bits.push(`${props.curve ?? ''}${props.inA}`);
+  if (props.idn !== undefined) bits.push(`${props.idn}mA${props.rcdType ?? ''}`);
+  if (props.spdType) bits.push(String(props.spdType));
+  if (props.setA !== undefined) bits.push(`${props.setA}A`);
+  return bits.join(' ');
+}
+
+/** Shrink the label rather than let it run into the neighbouring device. */
+function fitFontSize(text: string, width: number): number {
+  if (!text) return 8.5;
+  const estimated = text.length * 4.6;
+  if (estimated <= width) return 8.5;
+  return Math.max(5.5, (8.5 * width) / estimated);
 }
 
 function EnclosureSettings(): JSX.Element | null {
@@ -455,6 +479,7 @@ function LabelSheet(): JSX.Element {
     <div className="p-2.5 text-xs">
       <div className="sect-title mb-1">{t('panel.labelSheet')}</div>
       <div className="faint mb-2 text-[11px]">{t('panel.labelSheetHint')}</div>
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[11px]">
         <thead>
           <tr className="dim">
@@ -481,6 +506,7 @@ function LabelSheet(): JSX.Element {
           ))}
         </tbody>
       </table>
+      </div>
       <button className="btn btn-sm mt-2" onClick={() => window.print()}>
         ⎙ {t('action.exportLabels')}
       </button>

@@ -8,7 +8,8 @@
     "build": "tsc -b --noEmit false || true && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "locales": "python3 ../../tools/locales/build.py"
+    "locales": "python3 ../../tools/locales/build.py",
+    "test": "vitest run"
   },
   "dependencies": {
     "@budova/engine": "*",
@@ -27,6 +28,7 @@
     "@vitejs/plugin-react": "^4.5.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.9.0",
-    "vite": "^6.3.0"
+    "vite": "^6.3.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -63,6 +63,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     const { token, user } = await api.signup(email, password);
     storeToken(token);
     set({ user, serverUp: true });
+    adoptOpenProject();
     await get().refreshProjects();
   },
 
@@ -70,6 +71,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     const { token, user } = await api.login(email, password);
     storeToken(token);
     set({ user, serverUp: true });
+    adoptOpenProject();
     await get().refreshProjects();
   },
 
@@ -190,6 +192,15 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
 }));
+
+/**
+ * After signing in, the project on screen belongs to the account: the next save
+ * creates it on the server instead of writing to this browser again.
+ */
+function adoptOpenProject(): void {
+  const ps = useProject.getState();
+  if (ps.storage === 'local') ps.markSaved(null, 'cloud');
+}
 
 /** Autosave every few seconds while there is something to save. */
 export function startAutosave(intervalMs = 4000): () => void {

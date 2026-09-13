@@ -157,15 +157,9 @@ export function Toolbar(): JSX.Element {
           {ui.theme === 'dark' ? '☀' : '☾'}
         </button>
         <LanguageSwitcher />
-        {auth.user ? (
-          <button className="btn btn-sm" onClick={() => void auth.logout()} title={auth.user.email}>
-            {t('auth.signOut')}
-          </button>
-        ) : (
-          <button className="btn btn-sm" onClick={() => ui.set('dialog', 'auth')}>
-            {t('auth.signIn')}
-          </button>
-        )}
+        <button className="btn btn-sm" onClick={() => ui.set('dialog', 'auth')} title={auth.user?.email}>
+          {auth.user ? auth.user.email.split('@')[0] : t('auth.signIn')}
+        </button>
       </div>
     </div>
   );

@@ -58,16 +58,17 @@ export function App(): JSX.Element {
               {(['inspector', 'faults', 'instruments', 'log'] as SidePanel[]).map((p) => (
                 <button
                   key={p}
-                  className="btn btn-sm flex-1 !rounded-none !border-0"
+                  className="btn btn-sm min-w-0 flex-1 justify-center truncate !rounded-none !border-0 !px-1 !text-[11px]"
                   data-on={ui.sidePanel === p}
                   onClick={() => ui.set('sidePanel', p)}
-                >
-                  {t(
+                  title={t(
                     p === 'inspector' ? 'inspector.title'
                     : p === 'faults' ? 'fault.title'
                     : p === 'instruments' ? 'inst.title'
                     : 'log.title',
                   )}
+                >
+                  <span className="truncate">{t(`tab.${p}`)}</span>
                 </button>
               ))}
             </div>

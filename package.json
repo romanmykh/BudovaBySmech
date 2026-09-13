@@ -3,15 +3,22 @@
   "private": true,
   "version": "0.1.0",
   "description": "Low-voltage electrical installation and distribution board simulator (CZ)",
-  "workspaces": ["packages/engine", "apps/web", "apps/server"],
+  "workspaces": [
+    "packages/engine",
+    "apps/web",
+    "apps/server"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/server & npm run dev --workspace=apps/web",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:server": "npm run dev --workspace=apps/server",
     "build": "npm run build --workspace=packages/engine && npm run build --workspace=apps/web && npm run build --workspace=apps/server",
-    "test": "npm run test --workspace=packages/engine",
+    "test": "npm run test --workspace=packages/engine && npm run test --workspace=apps/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "start": "node apps/server/dist/index.js"
+    "start": "node apps/server/dist/index.js",
+    "locales": "python3 tools/locales/build.py"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

@@ -10,6 +10,14 @@ def add(section):
 
 
 # ---------------------------------------------------------------- library / inspector
+# Short labels for the side-panel tabs: the full names do not fit four abreast.
+add({
+"tab.inspector": ["Properties", "Vlastnosti", "Властивості", "Właściwości", "Свойства"],
+"tab.faults": ["Faults", "Poruchy", "Несправності", "Usterki", "Неисправности"],
+"tab.instruments": ["Meters", "Měření", "Виміри", "Pomiary", "Измерения"],
+"tab.log": ["Log", "Protokol", "Журнал", "Dziennik", "Журнал"],
+})
+
 add({
 "library.title": ["Component library", "Knihovna prvků", "Бібліотека елементів", "Biblioteka elementów", "Библиотека элементов"],
 "library.search": ["Search components…", "Hledat prvky…", "Пошук елементів…", "Szukaj elementów…", "Поиск элементов…"],

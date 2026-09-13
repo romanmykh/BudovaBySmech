@@ -13,6 +13,10 @@ export interface WireLayerProps {
   showCurrents: boolean;
   onSelect(e: React.PointerEvent, id: string): void;
   onAddBend(id: string, x: number, y: number): void;
+  onBendDown(e: React.PointerEvent, id: string, index: number): void;
+  onBendRemove(id: string, index: number): void;
+  /** Canvas coordinates of a pointer event, for placing a new bend point. */
+  toWorld(e: React.MouseEvent): { x: number; y: number };
 }
 
 /** Stroke width from the conductor cross-section, so 1,5 and 10 mm² look different. */
@@ -47,8 +51,19 @@ function WireLayerImpl(p: WireLayerProps): JSX.Element {
 
         return (
           <g key={w.id} onPointerDown={(e) => p.onSelect(e, w.id)}>
-            {/* generous hit area */}
-            <path d={d} stroke="transparent" strokeWidth={10} fill="none" className="cursor-pointer" />
+            {/* generous hit area; a double-click drops a bend point on the run */}
+            <path
+              d={d}
+              stroke="transparent"
+              strokeWidth={10}
+              fill="none"
+              className="cursor-pointer"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                const pt = p.toWorld(e);
+                p.onAddBend(w.id, pt.x, pt.y);
+              }}
+            />
             {(isSel || isHi) && (
               <path
                 d={d}
@@ -120,10 +135,19 @@ function WireLayerImpl(p: WireLayerProps): JSX.Element {
                 key={i}
                 cx={pt.x}
                 cy={pt.y}
-                r={3}
+                r={isSel ? 4.5 : 3}
                 fill={isSel ? 'var(--accent)' : color}
                 stroke="var(--bg-panel)"
                 strokeWidth={0.8}
+                className="cursor-move"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  p.onBendDown(e, w.id, i);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  p.onBendRemove(w.id, i);
+                }}
               />
             ))}
           </g>

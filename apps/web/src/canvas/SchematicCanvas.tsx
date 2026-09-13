@@ -232,6 +232,11 @@ export function SchematicCanvas(): JSX.Element {
         }
       });
     }
+    if (d.kind === 'bend' && d.moved) {
+      store.getState().commit(() => {
+        /* the position is already applied; this records it in the history */
+      });
+    }
     if (d.kind === 'select' && marquee && (marquee.w > 4 || marquee.h > 4)) {
       const hits = project.components
         .filter((c) => {
@@ -375,10 +380,44 @@ export function SchematicCanvas(): JSX.Element {
               e.stopPropagation();
               store.getState().select([], [id]);
             }}
+            toWorld={(e) => toWorld(e.clientX, e.clientY)}
             onAddBend={(id, x, y) => {
               store.getState().commit((p) => {
                 const wire = p.wires.find((w) => w.id === id);
-                if (wire) wire.points = [...(wire.points ?? []), { x: snap(x, ui.snap), y: snap(y, ui.snap) }];
+                if (!wire) return;
+                const pt = { x: snap(x, ui.snap), y: snap(y, ui.snap) };
+                // Insert the new bend at the nearest position along the run.
+                const pts = [...(wire.points ?? [])];
+                let best = pts.length;
+                let bestD = Infinity;
+                pts.forEach((existing, i) => {
+                  const dd = Math.hypot(existing.x - pt.x, existing.y - pt.y);
+                  if (dd < bestD) {
+                    bestD = dd;
+                    best = i;
+                  }
+                });
+                pts.splice(best === pts.length ? pts.length : best + 1, 0, pt);
+                wire.points = pts;
+              });
+            }}
+            onBendDown={(e, id, index) => {
+              store.getState().select([], [id]);
+              drag.current = {
+                kind: 'bend',
+                startX: e.clientX,
+                startY: e.clientY,
+                lastX: e.clientX,
+                lastY: e.clientY,
+                wireId: id,
+                bendIndex: index,
+                moved: false,
+              };
+            }}
+            onBendRemove={(id, index) => {
+              store.getState().commit((p) => {
+                const wire = p.wires.find((w) => w.id === id);
+                if (wire?.points) wire.points = wire.points.filter((_, i) => i !== index);
               });
             }}
           />

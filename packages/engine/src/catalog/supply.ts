@@ -178,27 +178,42 @@ export const supplyDefs: ComponentDef[] = [
   },
 
   {
+    /**
+     * Main earthing terminal. In a TN-C-S installation this is also the point at
+     * which the incoming PEN conductor is split, so it carries a dedicated PEN
+     * input and a neutral tap alongside the protective bonding ways. Everything
+     * on it is bonded together — that is exactly what the split point is.
+     */
     type: 'mainEarthBar',
     category: 'supply',
     symbol: 'earthBar',
-    size: () => ({ w: 140, h: 30 }),
+    size: () => ({ w: 160, h: 30 }),
     keywords: ['hlavní ochranná přípojnice', 'HOP', 'bonding', 'pospojování'],
     defaultProps: { ways: 6 },
     props: [{ key: 'ways', type: 'number', min: 2, max: 12, step: 1 }],
     terminals: (p) => {
       const n = Math.max(2, Math.min(12, Number(p.ways) || 6));
-      return Array.from({ length: n }, (_, i) => ({
-        id: `t${i + 1}`,
-        role: 'PE' as const,
-        mark: String(i + 1),
-        x: Math.round(((i + 1) * 140) / (n + 1)),
-        y: 30,
-        side: 'bottom' as const,
-      }));
+      const out = [
+        { id: 'pen', role: 'N' as const, mark: 'PEN', x: 14, y: 0, side: 'top' as const },
+        { id: 'n', role: 'N' as const, mark: 'N', x: 40, y: 0, side: 'top' as const },
+      ];
+      return [
+        ...out,
+        ...Array.from({ length: n }, (_, i) => ({
+          id: `t${i + 1}`,
+          role: 'PE' as const,
+          mark: String(i + 1),
+          x: Math.round(((i + 1) * 160) / (n + 1)),
+          y: 30,
+          side: 'bottom' as const,
+        })),
+      ];
     },
     stamp: (ctx) => {
       const n = Math.max(2, Math.min(12, Number(ctx.props.ways) || 6));
       const bus = ctx.net.node(`${ctx.comp.id}::bus`);
+      ctx.R(ctx.node('pen'), bus, 1e-4, 'pen');
+      ctx.R(ctx.node('n'), bus, 1e-4, 'n');
       for (let i = 1; i <= n; i++) ctx.R(ctx.node(`t${i}`), bus, 1e-4, `b${i}`);
     },
   },

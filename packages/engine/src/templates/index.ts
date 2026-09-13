@@ -17,25 +17,31 @@ function origin(b: ProjectBuilder, opts: { phases: 1 | 3; main: number; system?:
   const system = opts.system ?? 'TN-C-S';
   b.settings({ system, premises: 'dwelling' });
   b.add('supply', 's1', { system, phases: opts.phases, voltageLN: 230, ipk: 3000, rb: 2 }, { x: 40, y: 20, label: 'Přípojka' });
-  b.add('mainEarthBar', 'hop', { ways: 6 }, { x: 420, y: 30, label: 'HOP' });
-  b.add('earthElectrode', 'zem', { ra: 10 }, { x: 620, y: 100 });
-  b.add('nBar', 'nb', { ways: 12 }, { x: 420, y: 560, label: 'N' });
-  b.add('peBar', 'pb', { ways: 12 }, { x: 620, y: 560, label: 'PE' });
+  b.add('mainEarthBar', 'hop', { ways: 6 }, { x: 520, y: 30, label: 'HOP' });
+  b.add('earthElectrode', 'zem', { ra: 10 }, { x: 760, y: 110 });
+  b.add('nBar', 'nb', { ways: 12 }, { x: 300, y: 560, label: 'N' });
+  b.add('peBar', 'pb', { ways: 12 }, { x: 560, y: 560, label: 'PE' });
 
   const lines = opts.phases === 3 ? ['L1', 'L2', 'L3'] : ['L1'];
-  b.add('mainBreaker', 'hj', { inA: opts.main, curve: 'B', poles: opts.phases === 3 ? '3P' : '1P', icn: 10000 }, { x: 40, y: 120, label: 'HJ' });
+  b.add(
+    'mainBreaker',
+    'hj',
+    { inA: opts.main, curve: 'B', poles: opts.phases === 3 ? '3P' : '1P', icn: 10000 },
+    { x: 40, y: 120, label: 'HJ', panel: { enclosureId: 'e1', row: 1, slot: 0 } },
+  );
   lines.forEach((ph, i) => {
     b.wire(`s1.${ph}`, `hj.in.${opts.phases === 3 ? ph : 'L'}`, ph as any, 10, 6);
   });
   if (system === 'TN-C-S') {
-    b.wire('s1.PEN', 'hop.t1', 'PEN', 10, 6);
+    // The PEN arrives at the main earthing terminal and is split there.
+    b.wire('s1.PEN', 'hop.pen', 'PEN', 10, 6);
+    b.wire('hop.n', 'nb.t1', 'N', 10, 1);
   } else {
-    b.wire('s1.N', 'hop.t1', 'N', 10, 6);
-    b.wire('s1.PE', 'hop.t2', 'PE', 10, 6);
+    b.wire('s1.N', 'nb.t1', 'N', 10, 6);
+    b.wire('s1.PE', 'hop.t1', 'PE', 10, 6);
   }
-  b.wire('hop.t2', 'nb.t1', 'N', 10, 1);
-  b.wire('hop.t3', 'pb.t1', 'PE', 10, 1);
-  b.wire('hop.t4', 'zem.pe', 'PE', 16, 3);
+  b.wire('hop.t2', 'pb.t1', 'PE', 10, 1);
+  b.wire('hop.t3', 'zem.pe', 'PE', 16, 3);
   return { lines };
 }
 
@@ -158,8 +164,8 @@ export function socketCircuitDemo(): Project {
   origin(b, { phases: 3, main: 25 });
   b.circuit('c1', 'Zásuvky', 'socket', '#2f8fd0');
   b.enclosure({ id: 'e1', name: 'RD', rows: 2, modulesPerRow: 12, mount: 'flush', ip: 'IP40', x: 0, y: 0, door: true });
-  b.add('rcd', 'rc1', { inA: 40, idn: 30, rcdType: 'A', poles: '4P' }, { x: 40, y: 240, label: 'RCD1' });
-  b.add('mcb', 'q1', { inA: 16, curve: 'B', poles: '1P' }, { x: 220, y: 360, label: 'F1', circuit: 'c1' });
+  b.add('rcd', 'rc1', { inA: 40, idn: 30, rcdType: 'A', poles: '4P' }, { x: 40, y: 240, label: 'RCD1', panel: { enclosureId: 'e1', row: 1, slot: 4 } });
+  b.add('mcb', 'q1', { inA: 16, curve: 'B', poles: '1P' }, { x: 220, y: 360, label: 'F1', circuit: 'c1', panel: { enclosureId: 'e1', row: 2, slot: 0 } });
   b.add('socket16', 'z1', { inA: 16, outlets: 2, pluggedW: 3000, plugged: false }, { x: 220, y: 500, label: 'Z1', circuit: 'c1' });
   for (const ph of ['L1', 'L2', 'L3'] as const) b.wire(`hj.out.${ph}`, `rc1.in.${ph}`, ph, 10, 0.5);
   b.wire('nb.t2', 'rc1.in.N', 'N', 10, 0.5);
@@ -174,8 +180,8 @@ export function houseBoard(): Project {
   const b = new ProjectBuilder('Rodinný dům 3+1', 'tpl-house');
   origin(b, { phases: 3, main: 25 });
   b.enclosure({ id: 'e1', name: 'RD 4×12', rows: 4, modulesPerRow: 12, mount: 'flush', ip: 'IP40', x: 0, y: 0, door: true });
-  b.add('meter', 'em', { phases: 3, tariff: 'dual' }, { x: 180, y: 120, label: 'EM' });
-  b.add('spd', 'spd', { spdType: 'T1+T2', poles: '3P+N' }, { x: 700, y: 240, label: 'SPD' });
+  b.add('meter', 'em', { phases: 3, tariff: 'dual' }, { x: 200, y: 120, label: 'EM', panel: { enclosureId: 'e1', row: 1, slot: 3 } });
+  b.add('spd', 'spd', { spdType: 'T1+T2', poles: '3P+N' }, { x: 820, y: 250, label: 'SPD', panel: { enclosureId: 'e1', row: 2, slot: 0 } });
 
   b.circuit('c1', 'Světla', 'lighting', '#f0b429');
   b.circuit('c2', 'Zásuvky', 'socket', '#2f8fd0');
@@ -183,18 +189,20 @@ export function houseBoard(): Project {
   b.circuit('c4', 'Bojler', 'boiler', '#d07a2f');
   b.circuit('c5', 'Wallbox', 'evse', '#2fb37a');
 
-  b.add('rcbo', 'f1', { inA: 10, curve: 'B', idn: 30, rcdType: 'A', poles: '1P+N' }, { x: 40, y: 360, label: 'F1', circuit: 'c1' });
-  b.add('rcbo', 'f2', { inA: 16, curve: 'B', idn: 30, rcdType: 'A', poles: '1P+N' }, { x: 160, y: 360, label: 'F2', circuit: 'c2' });
-  b.add('rcbo', 'f3', { inA: 16, curve: 'B', idn: 30, rcdType: 'A', poles: '3P+N' }, { x: 280, y: 360, label: 'F3', circuit: 'c3' });
-  b.add('rcbo', 'f4', { inA: 16, curve: 'B', idn: 30, rcdType: 'A', poles: '1P+N' }, { x: 440, y: 360, label: 'F4', circuit: 'c4' });
-  b.add('rcbo', 'f5', { inA: 20, curve: 'B', idn: 30, rcdType: 'EV', poles: '3P+N' }, { x: 560, y: 360, label: 'F5', circuit: 'c5' });
+  b.add('rcbo', 'f1', { inA: 10, curve: 'B', idn: 30, rcdType: 'A', poles: '1P+N' }, { x: 40, y: 340, label: 'F1', circuit: 'c1', panel: { enclosureId: 'e1', row: 3, slot: 0 } });
+  b.add('rcbo', 'f2', { inA: 16, curve: 'B', idn: 30, rcdType: 'A', poles: '1P+N' }, { x: 200, y: 340, label: 'F2', circuit: 'c2', panel: { enclosureId: 'e1', row: 3, slot: 2 } });
+  b.add('rcbo', 'f3', { inA: 16, curve: 'B', idn: 30, rcdType: 'A', poles: '3P+N' }, { x: 360, y: 340, label: 'F3', circuit: 'c3', panel: { enclosureId: 'e1', row: 2, slot: 4 } });
+  b.add('rcbo', 'f4', { inA: 16, curve: 'B', idn: 30, rcdType: 'A', poles: '1P+N' }, { x: 560, y: 340, label: 'F4', circuit: 'c4', panel: { enclosureId: 'e1', row: 3, slot: 4 } });
+  b.add('rcbo', 'f5', { inA: 20, curve: 'B', idn: 30, rcdType: 'EV', poles: '3P+N' }, { x: 700, y: 340, label: 'F5', circuit: 'c5', panel: { enclosureId: 'e1', row: 2, slot: 8 } });
 
-  b.add('ledPanel', 'la1', { watts: 36 }, { x: 40, y: 600, label: 'E1', circuit: 'c1' });
-  b.add('switch1', 'sw1', {}, { x: 40, y: 720, label: 'S1', circuit: 'c1' });
-  b.add('socket16', 'z1', { outlets: 2, pluggedW: 2000 }, { x: 160, y: 600, label: 'Z1', circuit: 'c2' });
-  b.add('cooker3f', 'sp1', { watts: 7000 }, { x: 280, y: 600, label: 'Sporák', circuit: 'c3' });
-  b.add('boiler', 'bo1', { watts: 2000 }, { x: 440, y: 600, label: 'Bojler', circuit: 'c4' });
-  b.add('evse', 'ev1', { phases: 3, powerKw: 11, chargingA: 16 }, { x: 560, y: 600, label: 'Wallbox', circuit: 'c5' });
+  // The large appliances start switched off — a real board is not loaded to
+  // 20 kW the moment it is energised.
+  b.add('ledPanel', 'la1', { watts: 36 }, { x: 40, y: 700, label: 'E1', circuit: 'c1', location: 'obývací pokoj' });
+  b.add('switch1', 'sw1', {}, { x: 40, y: 820, label: 'S1', circuit: 'c1' });
+  b.add('socket16', 'z1', { outlets: 2, pluggedW: 2000, plugged: false }, { x: 200, y: 700, label: 'Z1', circuit: 'c2' });
+  b.add('cooker3f', 'sp1', { watts: 7000, wL1: 3000, wL2: 2500, wL3: 1500, on: false }, { x: 360, y: 700, label: 'Sporák', circuit: 'c3' });
+  b.add('boiler', 'bo1', { watts: 2000, on: false }, { x: 560, y: 700, label: 'Bojler', circuit: 'c4' });
+  b.add('evse', 'ev1', { phases: 3, powerKw: 11, chargingA: 16, on: false }, { x: 700, y: 700, label: 'Wallbox', circuit: 'c5' });
 
   for (const ph of ['L1', 'L2', 'L3'] as const) {
     b.wire(`hj.out.${ph}`, `em.in.${ph}`, ph, 10, 1);
@@ -249,11 +257,11 @@ export function flatBoard(): Project {
   b.circuit('c2', 'Zásuvky pokoje', 'socket', '#2f8fd0');
   b.circuit('c3', 'Kuchyň', 'socket', '#2f6fd0');
   b.circuit('c4', 'Pračka', 'appliance', '#8f5cbf');
-  b.add('rcd', 'rc1', { inA: 40, idn: 30, rcdType: 'A', poles: '2P' }, { x: 40, y: 240, label: 'RCD1' });
-  b.add('mcb', 'f1', { inA: 10, curve: 'B', poles: '1P' }, { x: 200, y: 360, label: 'F1', circuit: 'c1' });
-  b.add('mcb', 'f2', { inA: 16, curve: 'B', poles: '1P' }, { x: 300, y: 360, label: 'F2', circuit: 'c2' });
-  b.add('mcb', 'f3', { inA: 16, curve: 'B', poles: '1P' }, { x: 400, y: 360, label: 'F3', circuit: 'c3' });
-  b.add('mcb', 'f4', { inA: 16, curve: 'B', poles: '1P' }, { x: 500, y: 360, label: 'F4', circuit: 'c4' });
+  b.add('rcd', 'rc1', { inA: 40, idn: 30, rcdType: 'A', poles: '2P' }, { x: 40, y: 240, label: 'RCD1', panel: { enclosureId: 'e1', row: 1, slot: 2 } });
+  b.add('mcb', 'f1', { inA: 10, curve: 'B', poles: '1P' }, { x: 200, y: 360, label: 'F1', circuit: 'c1', panel: { enclosureId: 'e1', row: 1, slot: 5 } });
+  b.add('mcb', 'f2', { inA: 16, curve: 'B', poles: '1P' }, { x: 300, y: 360, label: 'F2', circuit: 'c2', panel: { enclosureId: 'e1', row: 1, slot: 6 } });
+  b.add('mcb', 'f3', { inA: 16, curve: 'B', poles: '1P' }, { x: 400, y: 360, label: 'F3', circuit: 'c3', panel: { enclosureId: 'e1', row: 1, slot: 7 } });
+  b.add('mcb', 'f4', { inA: 16, curve: 'B', poles: '1P' }, { x: 500, y: 360, label: 'F4', circuit: 'c4', panel: { enclosureId: 'e1', row: 1, slot: 8 } });
   b.add('ledPanel', 'la1', { watts: 36 }, { x: 200, y: 560, label: 'E1', circuit: 'c1' });
   b.add('switch1', 'sw1', {}, { x: 200, y: 680, label: 'S1', circuit: 'c1' });
   b.add('socket16', 'z1', { outlets: 2 }, { x: 300, y: 560, label: 'Z1', circuit: 'c2' });
@@ -287,10 +295,10 @@ export function garageBoard(): Project {
   b.circuit('c1', 'Osvětlení dílny', 'lighting', '#f0b429');
   b.circuit('c2', 'Zásuvky dílny', 'socket', '#2f8fd0');
   b.circuit('c3', 'Zásuvka 400 V', 'socket', '#d0472f');
-  b.add('rcd', 'rc1', { inA: 40, idn: 30, rcdType: 'A', poles: '4P' }, { x: 40, y: 240, label: 'RCD1' });
-  b.add('mcb', 'f1', { inA: 10, curve: 'B', poles: '1P' }, { x: 220, y: 360, label: 'F1', circuit: 'c1' });
-  b.add('mcb', 'f2', { inA: 16, curve: 'B', poles: '1P' }, { x: 320, y: 360, label: 'F2', circuit: 'c2' });
-  b.add('mcb', 'f3', { inA: 16, curve: 'C', poles: '3P' }, { x: 440, y: 360, label: 'F3', circuit: 'c3' });
+  b.add('rcd', 'rc1', { inA: 40, idn: 30, rcdType: 'A', poles: '4P' }, { x: 40, y: 240, label: 'RCD1', panel: { enclosureId: 'e1', row: 1, slot: 4 } });
+  b.add('mcb', 'f1', { inA: 10, curve: 'B', poles: '1P' }, { x: 220, y: 360, label: 'F1', circuit: 'c1', panel: { enclosureId: 'e1', row: 2, slot: 0 } });
+  b.add('mcb', 'f2', { inA: 16, curve: 'B', poles: '1P' }, { x: 320, y: 360, label: 'F2', circuit: 'c2', panel: { enclosureId: 'e1', row: 2, slot: 1 } });
+  b.add('mcb', 'f3', { inA: 16, curve: 'C', poles: '3P' }, { x: 440, y: 360, label: 'F3', circuit: 'c3', panel: { enclosureId: 'e1', row: 2, slot: 3 } });
   b.add('fluorescent', 'la1', { watts: 58 }, { x: 220, y: 560, label: 'E1', circuit: 'c1' });
   b.add('socket16', 'z1', { outlets: 2, ip: 'IP44' }, { x: 320, y: 560, label: 'Z1', circuit: 'c2' });
   b.add('socketCee', 'z2', { inA: 16 }, { x: 440, y: 560, label: 'Z2', circuit: 'c3' });

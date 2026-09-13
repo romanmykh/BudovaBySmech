@@ -187,7 +187,13 @@ export class Analysis {
     const line = terms.find((t) => t === 'in.L' || t === 'in.L1' || t === 'out.L');
     const pe = terms.find((t) => t === 'in.PE' || t === 'out.PE');
     if (!line || !pe) return null;
-    const r = measureLoop(this.sim, { comp: comp.id, terminal: line }, { comp: comp.id, terminal: pe }, 'L-PE');
+    const r = measureLoop(
+      this.sim,
+      { comp: comp.id, terminal: line },
+      { comp: comp.id, terminal: pe },
+      'L-PE',
+      { closeSwitches: true },
+    );
     return Number.isFinite(r.zs) ? r.zs : null;
   }
 }
@@ -387,35 +393,59 @@ const ruleMinCsa: Rule = (a, push) => {
 };
 
 const rulePeCsa: Rule = (a, push) => {
-  const byCircuit = new Map<string, { line: number; pe: number; ids: string[] }>();
-  for (const w of a.project.wires) {
-    const key = w.circuit ?? 'unassigned';
-    const e = byCircuit.get(key) ?? { line: 0, pe: Infinity, ids: [] };
-    if (w.role === 'PE') {
-      e.pe = Math.min(e.pe, w.csa);
-      e.ids.push(w.id);
-    } else if (w.role !== 'N' && w.role !== 'PEN' && w.role !== 'CTRL') {
-      e.line = Math.max(e.line, w.csa);
-    }
-    byCircuit.set(key, e);
+  /*
+   * The protective conductor of a cable is compared with the line conductors of
+   * the same cable. Cores of one cable share a route, so they are matched by
+   * circuit and by route length rather than being pooled across the whole
+   * installation — a 1,5 mm² PE in a lighting cable has nothing to do with the
+   * 10 mm² tails feeding the board.
+   */
+  const lines = a.project.wires.filter(
+    (w) => w.role === 'L1' || w.role === 'L2' || w.role === 'L3',
+  );
+  /** Equipment with an exposed conductive part — what a PE actually protects. */
+  const isEquipment = (compId: string): boolean => {
+    const c = a.comp(compId);
+    const def = c ? getDef(c.type) : undefined;
+    return !!(def?.flags?.load || def?.flags?.socket || c?.type === 'connectionBox');
+  };
+  const undersized: Array<{ wire: Wire; line: number; need: number }> = [];
+  let checked = 0;
+
+  for (const pe of a.project.wires) {
+    if (pe.role !== 'PE') continue;
+    // Only the protective conductor running to a piece of equipment is sized
+    // against a line conductor; bonding tails of protective devices are not.
+    const ends = [pe.from.comp, pe.to.comp].filter(isEquipment);
+    if (!ends.length) continue;
+    const sameRun = lines.filter(
+      (l) =>
+        Math.abs(l.length - pe.length) < 0.01 &&
+        l.material === pe.material &&
+        (ends.includes(l.from.comp) || ends.includes(l.to.comp)),
+    );
+    if (!sameRun.length) continue;
+    checked++;
+    const line = Math.max(...sameRun.map((l) => l.csa));
+    const need = minPeCsa(line);
+    if (pe.csa < need - 1e-9) undersized.push({ wire: pe, line, need });
   }
-  let bad = 0;
-  for (const [, e] of byCircuit) {
-    if (!Number.isFinite(e.pe) || e.line === 0) continue;
-    const need = minPeCsa(e.line);
-    if (e.pe < need - 1e-9) {
-      bad++;
-      push({
-        rule: 'pe.csa',
-        status: 'fail',
-        key: 'rule.pe.csa.fail',
-        vars: { pe: e.pe, line: e.line, need },
-        wires: e.ids,
-        ...ref(REFS.earthing),
-      });
-    }
+
+  if (undersized.length) {
+    const worst = undersized[0];
+    push({
+      rule: 'pe.csa',
+      status: 'fail',
+      key: 'rule.pe.csa.fail',
+      vars: { pe: worst.wire.csa, line: worst.line, need: worst.need, count: undersized.length },
+      wires: undersized.map((u) => u.wire.id),
+      ...ref(REFS.earthing),
+    });
+  } else if (checked) {
+    push({ rule: 'pe.csa', status: 'pass', key: 'rule.pe.csa.ok', ...ref(REFS.earthing) });
+  } else {
+    push({ rule: 'pe.csa', status: 'na', key: 'rule.pe.csa.none', ...ref(REFS.earthing) });
   }
-  if (!bad) push({ rule: 'pe.csa', status: 'pass', key: 'rule.pe.csa.ok', ...ref(REFS.earthing) });
 };
 
 const ruleVoltageDrop: Rule = (a, push) => {

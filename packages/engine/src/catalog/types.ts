@@ -110,6 +110,11 @@ export interface SimEnv {
   mainEarthNode?: number;
   /** The instruments solve an isolated installation; sources are then inactive. */
   deEnergized?: boolean;
+  /**
+   * Measure as the electrician does, with the manually operated switching
+   * devices closed: a loop impedance is not taken through an open light switch.
+   */
+  closeSwitches?: boolean;
 }
 
 export type LogLevel = 'info' | 'warn' | 'danger' | 'trip';

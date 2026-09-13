@@ -178,10 +178,10 @@ describe('scenario 6 — class I appliance with a lost PE and an internal fault'
     b.add('mcb', 'q1', { inA: 16, curve: 'B', poles: '1P' }, { label: 'F1' });
     b.add('boiler', 'bo1', { watts: 2000, classI: true }, { label: 'Bojler' });
     b.wire('s1.L1', 'hj.in.L1', 'L1', 10, 5);
-    b.wire('s1.PEN', 'hop.t1', 'PEN', 10, 5);
-    b.wire('hop.t2', 'nb.t1', 'N', 10, 1);
-    b.wire('hop.t3', 'pb.t1', 'PE', 10, 1);
-    b.wire('hop.t4', 'zem.pe', 'PE', 16, 3);
+    b.wire('s1.PEN', 'hop.pen', 'PEN', 10, 5);
+    b.wire('hop.n', 'nb.t1', 'N', 10, 1);
+    b.wire('hop.t1', 'pb.t1', 'PE', 10, 1);
+    b.wire('hop.t2', 'zem.pe', 'PE', 16, 3);
     b.wire('hj.out.L1', 'rc1.in.L', 'L1', 10, 0.5);
     b.wire('nb.t2', 'rc1.in.N', 'N', 10, 0.5);
     b.wire('rc1.out.L', 'q1.in.L', 'L1', 10, 0.3);
@@ -300,10 +300,10 @@ describe('scenario 8 — B16 feeding 1,5 mm²', () => {
     b.add('mcb', 'q1', { inA: 16, curve: 'B', poles: '1P' }, { label: 'F1', circuit: 'c1' });
     b.add('socket16', 'z1', { outlets: 2 }, { label: 'Z1', circuit: 'c1' });
     b.wire('s1.L1', 'hj.in.L', 'L1', 10, 5);
-    b.wire('s1.PEN', 'hop.t1', 'PEN', 10, 5);
-    b.wire('hop.t2', 'nb.t1', 'N', 10, 1);
-    b.wire('hop.t3', 'pb.t1', 'PE', 10, 1);
-    b.wire('hop.t4', 'zem.pe', 'PE', 16, 3);
+    b.wire('s1.PEN', 'hop.pen', 'PEN', 10, 5);
+    b.wire('hop.n', 'nb.t1', 'N', 10, 1);
+    b.wire('hop.t1', 'pb.t1', 'PE', 10, 1);
+    b.wire('hop.t2', 'zem.pe', 'PE', 16, 3);
     b.wire('hj.out.L', 'rc1.in.L', 'L1', 10, 0.5);
     b.wire('nb.t2', 'rc1.in.N', 'N', 10, 0.5);
     b.wire('rc1.out.L', 'q1.in.L', 'L1', 10, 0.3, { circuit: 'c1' });
@@ -445,5 +445,39 @@ describe('templates', () => {
     expect(report.summary.pass).toBeGreaterThan(5);
     const evse = report.findings.find((f) => f.rule === 'evse');
     expect(evse?.status).toBe('pass');
+  });
+});
+
+/* ------------------------------------------------------------------ */
+
+describe('design rule check accuracy', () => {
+  it('measures the disconnection loop with the light switch closed', () => {
+    const report = runDesignRuleCheck(houseBoard());
+    const lighting = report.findings.filter((f) => f.rule === 'disconnection');
+    expect(lighting.length).toBeGreaterThan(0);
+    // A loop taken through an open wall switch would read as an open circuit.
+    expect(lighting.every((f) => f.status === 'pass')).toBe(true);
+  });
+
+  it('sizes the protective conductor against its own cable, not the whole board', () => {
+    const report = runDesignRuleCheck(houseBoard());
+    expect(report.findings.find((f) => f.rule === 'pe.csa' && f.status === 'fail')).toBeFalsy();
+  });
+
+  it('still catches a genuinely undersized protective conductor', () => {
+    const p = houseBoard();
+    // The cooker circuit is 4 mm²; drop its protective conductor to 1,5 mm².
+    const pe = p.wires.find((w) => w.role === 'PE' && w.to.comp === 'sp1')!;
+    pe.csa = 1.5;
+    const report = runDesignRuleCheck(p);
+    const f = report.findings.find((x) => x.rule === 'pe.csa' && x.status === 'fail');
+    expect(f).toBeTruthy();
+    expect(f!.vars!.need).toBe(4);
+  });
+
+  it('passes a healthy family house board overall', () => {
+    const report = runDesignRuleCheck(houseBoard());
+    const fails = report.findings.filter((f) => f.status === 'fail');
+    expect(fails.map((f) => `${f.rule}: ${f.key}`)).toEqual([]);
   });
 });

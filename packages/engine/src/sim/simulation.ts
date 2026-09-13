@@ -64,6 +64,22 @@ const EMPTY_RESULTS = (): SimResults => ({
   solved: false,
 });
 
+/**
+ * A copy of a device's runtime state with every contact closed, used only for
+ * measurement. The original state is never touched.
+ */
+function closedCopy(state: DeviceState): DeviceState {
+  const copy: DeviceState = { ...state };
+  if ('closed' in copy) copy.closed = true;
+  if ('on' in copy) copy.on = true;
+  if ('pressed' in copy) copy.pressed = true;
+  if ('a' in copy) copy.a = true;
+  if ('b' in copy) copy.b = true;
+  copy.tripped = false;
+  copy.blown = false;
+  return copy;
+}
+
 /** Resistance of a wire with a damage fault applied. */
 function wireResistance(w: Wire, settings: ProjectSettings, extraR: number): number {
   return conductorResistance(w.length, w.csa, w.material, settings.conductorTemp) + extraR;
@@ -86,6 +102,8 @@ interface BuiltNetwork {
 export interface ProbeOptions {
   /** Solve as if the installation were isolated from the supply. */
   deEnergized?: boolean;
+  /** Solve with every manually operated contact closed. */
+  closeSwitches?: boolean;
   /** Add measuring branches; the returned ids can be read back from the solution. */
   extra?: (net: Network, nodeOf: (compId: string, terminal: string) => number) => number[];
 }
@@ -257,20 +275,21 @@ export class Simulator {
 
   /* ---------------- network construction ---------------- */
 
-  private env(dt: number, deEnergized = false): SimEnv {
+  private env(dt: number, probe?: ProbeOptions): SimEnv {
     return {
       t: this.t,
       dt,
       settings: this.project.settings,
       faults: this.faults.filter((f) => f.enabled),
-      deEnergized,
+      deEnergized: probe?.deEnergized,
+      closeSwitches: probe?.closeSwitches,
     } as SimEnv;
   }
 
   private build(dt: number, probe?: ProbeOptions): BuiltNetwork {
     const net = new Network();
     const settings = this.project.settings;
-    const env = this.env(dt, probe?.deEnergized);
+    const env = this.env(dt, probe);
     const wireBranch: Record<string, number> = {};
     const compBranch = new Map<string, number>();
     const byId = new Map(this.project.components.map((c) => [c.id, c]));
@@ -317,7 +336,7 @@ export class Simulator {
       const def = getDef(comp.type);
       if (!def) continue;
       const props = effectiveProps(comp.type, comp.props);
-      const state = this.state(comp.id);
+      const state = probe?.closeSwitches ? closedCopy(this.state(comp.id)) : this.state(comp.id);
       // Make sure every declared terminal exists as a node, so that dangling
       // terminals still show a (floating) potential in the UI.
       for (const t of def.terminals(props)) net.node(`${comp.id}:${t.id}`);

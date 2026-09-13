@@ -82,14 +82,21 @@ export interface LoopResult {
  * Fault loop impedance, measured the way a loop tester does it: the
  * open-circuit voltage is compared with the voltage under a known test load.
  */
-export function measureLoop(sim: Simulator, line: Probe, ret: Probe, loop: 'L-PE' | 'L-N' = 'L-PE'): LoopResult {
-  const base = sim.probe({});
+export function measureLoop(
+  sim: Simulator,
+  line: Probe,
+  ret: Probe,
+  loop: 'L-PE' | 'L-N' = 'L-PE',
+  opts: { closeSwitches?: boolean } = {},
+): LoopResult {
+  const base = sim.probe({ closeSwitches: opts.closeSwitches });
   const nl = base.net.node(`${line.comp}:${line.terminal}`);
   const nr = base.net.node(`${ret.comp}:${ret.terminal}`);
   const u0 = cabs(csub(base.sol.v(nl), base.sol.v(nr)));
   const rTest = 10;
   let id = -1;
   const loaded = sim.probe({
+    closeSwitches: opts.closeSwitches,
     extra: (net, nodeOf) => {
       id = net.addZ(nodeOf(line.comp, line.terminal), nodeOf(ret.comp, ret.terminal), rTest, 0, 'instrument', 'loop');
       return [id];

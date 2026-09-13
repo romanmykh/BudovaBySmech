@@ -72,6 +72,14 @@ export function Toolbar(): JSX.Element {
       <button className="btn btn-sm" data-on={ui.mode === 'pan'} onClick={() => ui.set('mode', 'pan')}>
         {t('action.panMode')}
       </button>
+      <button
+        className="btn btn-sm"
+        data-on={ui.mode === 'text'}
+        onClick={() => ui.set('mode', ui.mode === 'text' ? 'select' : 'text')}
+        title={t('annotation.addHint')}
+      >
+        {t('action.textMode')}
+      </button>
 
       <select
         className="!w-auto"

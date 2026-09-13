@@ -20,13 +20,14 @@ interface Pending {
 }
 
 interface Drag {
-  kind: 'move' | 'select' | 'pan' | 'bend';
+  kind: 'move' | 'select' | 'pan' | 'bend' | 'annotation';
   startX: number;
   startY: number;
   lastX: number;
   lastY: number;
   wireId?: string;
   bendIndex?: number;
+  annotationId?: string;
   moved: boolean;
 }
 
@@ -36,6 +37,7 @@ export function SchematicCanvas(): JSX.Element {
   const project = useProject((s) => s.project);
   const selection = useProject((s) => s.selection);
   const selectedWires = useProject((s) => s.selectedWires);
+  const selectedAnnotations = useProject((s) => s.selectedAnnotations);
   const store = useProject;
   const ui = useUi();
   const results = useSim((s) => s.results);
@@ -131,6 +133,9 @@ export function SchematicCanvas(): JSX.Element {
   const onPointerDownBody = useCallback(
     (e: React.PointerEvent, id: string) => {
       if (e.button !== 0) return;
+      // While placing a note, a click belongs to the canvas even when it lands
+      // on top of a device.
+      if (ui.mode === 'text') return;
       e.stopPropagation();
       // In live mode a click operates the device instead of selecting it.
       const comp = project.components.find((c) => c.id === id);
@@ -155,7 +160,7 @@ export function SchematicCanvas(): JSX.Element {
       drag.current = { kind: 'move', startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false };
       (e.target as Element).setPointerCapture?.(e.pointerId);
     },
-    [project.components, running, operate, selection, store],
+    [project.components, running, operate, selection, store, ui.mode],
   );
 
   const onSvgPointerDown = useCallback(
@@ -168,6 +173,19 @@ export function SchematicCanvas(): JSX.Element {
       if (e.button !== 0) return;
       if (pending) {
         setPending(null);
+        return;
+      }
+      if (ui.mode === 'text') {
+        const at = toWorld(e.clientX, e.clientY);
+        store.getState().addAnnotation({
+          kind: 'text',
+          x: snap(at.x, ui.snap),
+          y: snap(at.y, ui.snap),
+          text: '',
+          fontSize: 13,
+          view: 'schematic',
+        });
+        ui.set('mode', 'select');
         return;
       }
       if (!e.shiftKey) store.getState().clearSelection();
@@ -201,6 +219,14 @@ export function SchematicCanvas(): JSX.Element {
           y: Math.min(start.y, w.y),
           w: Math.abs(w.x - start.x),
           h: Math.abs(w.y - start.y),
+        });
+      } else if (d.kind === 'annotation' && d.annotationId) {
+        store.getState().touch((p) => {
+          const a = p.annotations.find((x) => x.id === d.annotationId);
+          if (a) {
+            a.x += dx / view.zoom;
+            a.y += dy / view.zoom;
+          }
         });
       } else if (d.kind === 'bend' && d.wireId !== undefined && d.bendIndex !== undefined) {
         const wire = project.wires.find((x) => x.id === d.wireId);
@@ -238,9 +264,17 @@ export function SchematicCanvas(): JSX.Element {
         store.getState().cancelGesture();
       }
     }
-    if (d.kind === 'bend') {
-      if (d.moved) store.getState().endGesture();
-      else store.getState().cancelGesture();
+    if (d.kind === 'bend' || d.kind === 'annotation') {
+      if (d.moved) {
+        store.getState().endGesture((p) => {
+          if (d.kind !== 'annotation' || !d.annotationId) return;
+          const a = p.annotations.find((x) => x.id === d.annotationId);
+          if (a) {
+            a.x = snap(a.x, ui.snap);
+            a.y = snap(a.y, ui.snap);
+          }
+        });
+      } else store.getState().cancelGesture();
     }
     if (d.kind === 'select' && marquee && (marquee.w > 4 || marquee.h > 4)) {
       const hits = project.components
@@ -353,25 +387,57 @@ export function SchematicCanvas(): JSX.Element {
           {/* annotations behind everything */}
           {project.annotations
             .filter((a) => (a.view ?? 'schematic') === 'schematic')
-            .map((a) =>
-              a.kind === 'rect' ? (
-                <rect
-                  key={a.id}
-                  x={a.x}
-                  y={a.y}
-                  width={a.w ?? 100}
-                  height={a.h ?? 60}
-                  fill={a.color ?? 'var(--accent)'}
-                  fillOpacity={0.06}
-                  stroke={a.color ?? 'var(--border-strong)'}
-                  strokeDasharray="4 3"
-                />
-              ) : (
-                <text key={a.id} x={a.x} y={a.y} fontSize={a.fontSize ?? 13} fill={a.color ?? 'var(--text-dim)'}>
-                  {a.text}
-                </text>
-              ),
-            )}
+            .map((a) => {
+              const isSel = selectedAnnotations.includes(a.id);
+              const onDown = (e: React.PointerEvent) => {
+                e.stopPropagation();
+                store.getState().select([], [], [a.id]);
+                store.getState().beginGesture();
+                drag.current = {
+                  kind: 'annotation',
+                  startX: e.clientX,
+                  startY: e.clientY,
+                  lastX: e.clientX,
+                  lastY: e.clientY,
+                  annotationId: a.id,
+                  moved: false,
+                };
+              };
+              return (
+                <g key={a.id} onPointerDown={onDown} className="cursor-move">
+                  {a.kind === 'rect' ? (
+                    <rect
+                      x={a.x}
+                      y={a.y}
+                      width={a.w ?? 100}
+                      height={a.h ?? 60}
+                      fill={a.color ?? 'var(--accent)'}
+                      fillOpacity={0.06}
+                      stroke={isSel ? 'var(--accent)' : a.color ?? 'var(--border-strong)'}
+                      strokeDasharray="4 3"
+                    />
+                  ) : (
+                    <>
+                      {isSel && (
+                        <rect
+                          x={a.x - 4}
+                          y={a.y - (a.fontSize ?? 13)}
+                          width={Math.max(40, (a.text ?? '').length * (a.fontSize ?? 13) * 0.58) + 8}
+                          height={(a.fontSize ?? 13) * 1.5}
+                          fill="var(--accent)"
+                          fillOpacity={0.1}
+                          stroke="var(--accent)"
+                          strokeDasharray="3 2"
+                        />
+                      )}
+                      <text x={a.x} y={a.y} fontSize={a.fontSize ?? 13} fill={a.color ?? 'var(--text-dim)'}>
+                        {a.text || t('canvas.notePlaceholder')}
+                      </text>
+                    </>
+                  )}
+                </g>
+              );
+            })}
 
           <WireLayer
             project={project}
@@ -382,8 +448,9 @@ export function SchematicCanvas(): JSX.Element {
             showLabels={view.zoom > 1.6 && !running}
             showCurrents={running && view.zoom > 0.95}
             onSelect={(e, id) => {
+              if (ui.mode === 'text') return;
               e.stopPropagation();
-              store.getState().select([], [id]);
+              store.getState().select([], [id], []);
             }}
             toWorld={(e) => toWorld(e.clientX, e.clientY)}
             onAddBend={(id, x, y) => {

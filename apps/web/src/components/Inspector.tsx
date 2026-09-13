@@ -2,11 +2,12 @@ import { useState, type JSX } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getDef, effectiveProps, CSA_VALUES, type PropSpec, type ComponentInstance, type Wire,
-  type ConductorRole,
+  type ConductorRole, type Annotation,
 } from '@budova/engine';
 import { useProject } from '../store/project.js';
 import { useSim } from '../store/sim.js';
 import { terminalPositions } from '../canvas/geometry.js';
+import { CircuitsPanel } from './CircuitsPanel.js';
 
 const ROLES: ConductorRole[] = ['L1', 'L2', 'L3', 'N', 'PE', 'PEN', 'CTRL', 'ELV+', 'ELV-'];
 const METHODS = ['A1', 'A2', 'B1', 'B2', 'C', 'E'];
@@ -16,7 +17,12 @@ export function Inspector(): JSX.Element {
   const project = useProject((s) => s.project);
   const selection = useProject((s) => s.selection);
   const selectedWires = useProject((s) => s.selectedWires);
+  const selectedAnnotations = useProject((s) => s.selectedAnnotations);
 
+  if (selectedAnnotations.length === 1) {
+    const note = project.annotations.find((a) => a.id === selectedAnnotations[0]);
+    if (note) return <AnnotationInspector note={note} />;
+  }
   if (selectedWires.length === 1) {
     const wire = project.wires.find((w) => w.id === selectedWires[0]);
     if (wire) return <WireInspector wire={wire} />;
@@ -34,9 +40,52 @@ export function Inspector(): JSX.Element {
     );
   }
   return (
-    <div className="p-3 text-xs">
-      <div className="sect-title mb-2">{t('inspector.title')}</div>
-      <div className="dim">{t('inspector.nothing')}</div>
+    <div className="flex h-full flex-col overflow-y-auto text-xs">
+      <div className="p-3">
+        <div className="sect-title mb-2">{t('inspector.title')}</div>
+        <div className="dim">{t('inspector.nothing')}</div>
+      </div>
+      <CircuitsPanel />
+    </div>
+  );
+}
+
+function AnnotationInspector({ note }: { note: Annotation }): JSX.Element {
+  const { t } = useTranslation();
+  const update = useProject((s) => s.updateAnnotation);
+  const remove = useProject((s) => s.deleteSelection);
+  return (
+    <div className="flex h-full flex-col overflow-y-auto p-2.5 text-xs">
+      <div className="sect-title mb-2">{t('annotation.title')}</div>
+      <label className="mb-1.5 block">
+        <span className="dim text-[11px]">{t('annotation.text')}</span>
+        <textarea
+          rows={3}
+          autoFocus
+          value={note.text ?? ''}
+          onChange={(e) => update(note.id, { text: e.target.value })}
+        />
+      </label>
+      <Row label={t('annotation.fontSize')}>
+        <input
+          type="number"
+          min={8}
+          max={48}
+          value={note.fontSize ?? 13}
+          onChange={(e) => update(note.id, { fontSize: Number(e.target.value) })}
+        />
+      </Row>
+      <Row label={t('prop.color')}>
+        <input
+          type="color"
+          className="h-6 w-full rounded border"
+          value={note.color ?? '#777777'}
+          onChange={(e) => update(note.id, { color: e.target.value })}
+        />
+      </Row>
+      <button className="btn btn-sm btn-danger mt-2 self-start" onClick={() => remove()}>
+        {t('action.delete')}
+      </button>
     </div>
   );
 }

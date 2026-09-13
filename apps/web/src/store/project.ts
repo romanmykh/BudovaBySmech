@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   type Project, type ComponentInstance, type Wire, type ConductorRole, type Enclosure,
+  type Annotation, type Circuit, type CircuitKind,
   emptyProject, effectiveProps, getDef, sizeOf, moduleCount, uid, newComponent,
 } from '@budova/engine';
 
@@ -20,6 +21,7 @@ interface ProjectState {
   dirty: boolean;
   selection: string[];
   selectedWires: string[];
+  selectedAnnotations: string[];
   past: Project[];
   future: Project[];
   clipboard: { components: ComponentInstance[]; wires: Wire[] } | null;
@@ -41,7 +43,7 @@ interface ProjectState {
   redo(): void;
   markSaved(id?: string | null, storage?: StorageKind): void;
 
-  select(ids: string[], wires?: string[]): void;
+  select(ids: string[], wires?: string[], annotations?: string[]): void;
   toggleSelect(id: string, additive: boolean): void;
   clearSelection(): void;
 
@@ -63,6 +65,13 @@ interface ProjectState {
   setWire(id: string, patch: Partial<Wire>): void;
   deleteWire(id: string): void;
 
+  addAnnotation(a: Omit<Annotation, 'id'>): string;
+  updateAnnotation(id: string, patch: Partial<Annotation>): void;
+
+  addCircuit(name: string, kind: CircuitKind): string;
+  updateCircuit(id: string, patch: Partial<Circuit>): void;
+  deleteCircuit(id: string): void;
+
   addEnclosure(e: Omit<Enclosure, 'id'>): string;
   placeInPanel(compId: string, enclosureId: string, row: number, slot: number): void;
   removeFromPanel(compId: string): void;
@@ -82,6 +91,7 @@ export const useProject = create<ProjectState>((set, get) => ({
   dirty: false,
   selection: [],
   selectedWires: [],
+  selectedAnnotations: [],
   past: [],
   future: [],
   clipboard: null,
@@ -95,6 +105,7 @@ export const useProject = create<ProjectState>((set, get) => ({
       dirty: false,
       selection: [],
       selectedWires: [],
+      selectedAnnotations: [],
       past: [],
       future: [],
       gesture: null,
@@ -164,15 +175,16 @@ export const useProject = create<ProjectState>((set, get) => ({
   markSaved: (id, storage) =>
     set((s) => ({ dirty: false, projectId: id ?? s.projectId, storage: storage ?? s.storage })),
 
-  select: (ids, wires = []) => set({ selection: ids, selectedWires: wires }),
+  select: (ids, wires = [], annotations = []) =>
+    set({ selection: ids, selectedWires: wires, selectedAnnotations: annotations }),
   toggleSelect: (id, additive) =>
     set((s) => {
-      if (!additive) return { selection: [id], selectedWires: [] };
+      if (!additive) return { selection: [id], selectedWires: [], selectedAnnotations: [] };
       return s.selection.includes(id)
         ? { selection: s.selection.filter((x) => x !== id) }
         : { selection: [...s.selection, id] };
     }),
-  clearSelection: () => set({ selection: [], selectedWires: [] }),
+  clearSelection: () => set({ selection: [], selectedWires: [], selectedAnnotations: [] }),
 
   addComponent: (type, x, y) => {
     const id = uid('c');
@@ -195,8 +207,8 @@ export const useProject = create<ProjectState>((set, get) => ({
   },
 
   deleteSelection: () => {
-    const { selection, selectedWires } = get();
-    if (!selection.length && !selectedWires.length) return;
+    const { selection, selectedWires, selectedAnnotations } = get();
+    if (!selection.length && !selectedWires.length && !selectedAnnotations.length) return;
     get().commit((p) => {
       const ids = new Set(selection);
       p.components = p.components.filter((c) => !ids.has(c.id));
@@ -204,11 +216,13 @@ export const useProject = create<ProjectState>((set, get) => ({
       p.wires = p.wires.filter(
         (w) => !wireIds.has(w.id) && !ids.has(w.from.comp) && !ids.has(w.to.comp),
       );
+      const annIds = new Set(selectedAnnotations);
+      p.annotations = p.annotations.filter((a) => !annIds.has(a.id));
       p.groups = p.groups
         .map((g) => ({ ...g, members: g.members.filter((m) => !ids.has(m)) }))
         .filter((g) => g.members.length > 1);
     });
-    set({ selection: [], selectedWires: [] });
+    set({ selection: [], selectedWires: [], selectedAnnotations: [] });
   },
 
   copySelection: () => {
@@ -379,6 +393,43 @@ export const useProject = create<ProjectState>((set, get) => ({
   deleteWire: (id) =>
     get().commit((p) => {
       p.wires = p.wires.filter((w) => w.id !== id);
+    }),
+
+  addAnnotation: (a) => {
+    const id = uid('a');
+    get().commit((p) => {
+      p.annotations.push({ ...a, id } as Annotation);
+    });
+    set({ selection: [], selectedWires: [], selectedAnnotations: [id] });
+    return id;
+  },
+
+  updateAnnotation: (id, patch) =>
+    get().commit((p) => {
+      const a = p.annotations.find((x) => x.id === id);
+      if (a) Object.assign(a, patch);
+    }),
+
+  addCircuit: (name, kind) => {
+    const id = uid('circ');
+    const palette = ['#f0b429', '#2f8fd0', '#d0472f', '#2fb37a', '#7c5cbf', '#d07a2f', '#3f9fa8'];
+    get().commit((p) => {
+      p.circuits.push({ id, name, kind, color: palette[p.circuits.length % palette.length] });
+    });
+    return id;
+  },
+
+  updateCircuit: (id, patch) =>
+    get().commit((p) => {
+      const c = p.circuits.find((x) => x.id === id);
+      if (c) Object.assign(c, patch);
+    }),
+
+  deleteCircuit: (id) =>
+    get().commit((p) => {
+      p.circuits = p.circuits.filter((c) => c.id !== id);
+      for (const c of p.components) if (c.circuit === id) delete c.circuit;
+      for (const w of p.wires) if (w.circuit === id) delete w.circuit;
     }),
 
   addEnclosure: (e) => {

@@ -44,6 +44,20 @@ add({
 })
 
 # ---------------------------------------------------------------- canvas
+# Named circuit grouping
+add({
+"circuits.title": ["Circuits", "Obvody", "Кола", "Obwody", "Цепи"],
+"circuits.none": ["No circuits named yet.", "Zatím nejsou pojmenovány žádné obvody.", "Кола ще не названо.", "Nie nazwano jeszcze obwodów.", "Цепи ещё не названы."],
+"circuits.newName": ["New circuit name", "Název nového obvodu", "Назва нового кола", "Nazwa nowego obwodu", "Название новой цепи"],
+"circuits.selectMembers": ["Select everything on this circuit", "Vybrat vše na tomto obvodu", "Вибрати все в цьому колі", "Zaznacz wszystko w tym obwodzie", "Выбрать всё в этой цепи"],
+"circuits.autoCreate": ["Name a circuit for every unassigned device", "Pojmenovat obvod pro každý nezařazený přístroj", "Створити коло для кожного невіднесеного апарата", "Utwórz obwód dla każdego nieprzypisanego aparatu", "Создать цепь для каждого неотнесённого аппарата"],
+"circuits.allAssigned": ["Every protective device already belongs to a circuit.", "Každý jisticí přístroj už patří k obvodu.", "Кожен захисний апарат уже належить до кола.", "Każdy aparat zabezpieczający należy już do obwodu.", "Каждый защитный аппарат уже относится к цепи."],
+"annotation.title": ["Note", "Poznámka", "Примітка", "Notatka", "Заметка"],
+"annotation.text": ["Text", "Text", "Текст", "Tekst", "Текст"],
+"annotation.fontSize": ["Text size", "Velikost písma", "Розмір шрифту", "Rozmiar czcionki", "Размер шрифта"],
+"annotation.addHint": ["Click the canvas to place a note.", "Klikněte na plochu a umístěte poznámku.", "Клацніть на полотні, щоб розмістити примітку.", "Kliknij obszar roboczy, aby umieścić notatkę.", "Нажмите на холст, чтобы разместить заметку."],
+})
+
 add({
 "canvas.emptyTitle": ["Empty canvas", "Prázdná plocha", "Порожнє полотно", "Pusty obszar roboczy", "Пустой холст"],
 "canvas.emptyHint": ["Drag a component from the library, or start from a template.", "Přetáhněte prvek z knihovny nebo začněte ze šablony.", "Перетягніть елемент із бібліотеки або почніть із шаблону.", "Przeciągnij element z biblioteki albo zacznij od szablonu.", "Перетащите элемент из библиотеки или начните с шаблона."],

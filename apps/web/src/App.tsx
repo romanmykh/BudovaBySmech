@@ -10,6 +10,7 @@ import { InstrumentPanel } from './components/InstrumentPanel.js';
 import { ReportPanel } from './components/ReportPanel.js';
 import { Dialogs } from './components/Dialogs.js';
 import { SchematicCanvas } from './canvas/SchematicCanvas.js';
+import { SelectionBar } from './components/SelectionBar.js';
 import { PanelView } from './panel/PanelView.js';
 import { useUi, type SidePanel } from './store/ui.js';
 import { useProject } from './store/project.js';
@@ -43,8 +44,13 @@ export function App(): JSX.Element {
           </div>
         )}
 
-        <div className="min-w-0 flex-1">
-          {view === 'schematic' && <SchematicCanvas />}
+        <div className="relative min-w-0 flex-1">
+          {view === 'schematic' && (
+            <>
+              <SchematicCanvas />
+              <SelectionBar />
+            </>
+          )}
           {view === 'panel' && <PanelView />}
           {view === 'report' && <ReportPanel />}
         </div>

@@ -16,7 +16,7 @@ export function SelectionBar(): JSX.Element | null {
 
   return (
     <div
-      className="fade-in absolute left-1/2 top-2 z-10 flex -translate-x-1/2 items-center gap-1 rounded px-1.5 py-1 shadow-md no-print"
+      className="fade-in absolute left-1/2 top-2 z-10 flex max-w-[96vw] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded px-1.5 py-1 shadow-md no-print"
       style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)' }}
     >
       <span className="faint px-1 text-[11px]">{t('inspector.multiple', { count: selection.length })}</span>

@@ -13,6 +13,7 @@ import {
   type Box,
 } from './geometry.js';
 import { Minimap } from './Minimap.js';
+import { useIsMobile, useIsTouch } from '../hooks/useMediaQuery.js';
 
 interface Pending {
   comp: string;
@@ -44,7 +45,12 @@ export function SchematicCanvas(): JSX.Element {
   const running = useSim((s) => s.running);
   const operate = useSim((s) => s.operate);
 
+  const isTouch = useIsTouch();
+  const isMobile = useIsMobile();
   const [view, setView] = useState({ x: 60, y: 40, zoom: 1 });
+  /** Active touch points, for pinch to zoom. */
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; cx: number; cy: number } | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [cursor, setCursor] = useState<Point>({ x: 0, y: 0 });
   const [marquee, setMarquee] = useState<Box | null>(null);
@@ -165,7 +171,10 @@ export function SchematicCanvas(): JSX.Element {
 
   const onSvgPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      const isPan = e.button === 1 || ui.mode === 'pan' || e.altKey;
+      if (pinch.current) return;
+      // With a finger, dragging empty canvas pans: a rubber-band selection is a
+      // mouse idiom and would make the drawing impossible to move.
+      const isPan = e.button === 1 || ui.mode === 'pan' || e.altKey || (isTouch && e.pointerType !== 'mouse');
       if (isPan) {
         drag.current = { kind: 'pan', startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false };
         return;
@@ -198,6 +207,7 @@ export function SchematicCanvas(): JSX.Element {
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (pinch.current) return;
       const w = toWorld(e.clientX, e.clientY);
       setCursor(w);
       const d = drag.current;
@@ -243,7 +253,7 @@ export function SchematicCanvas(): JSX.Element {
     [toWorld, view.zoom, store, project.wires, ui.snap],
   );
 
-  const onPointerUp = useCallback(() => {
+  const onPointerUp = useCallback((e?: React.PointerEvent) => {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
@@ -290,6 +300,65 @@ export function SchematicCanvas(): JSX.Element {
     }
     setMarquee(null);
   }, [store, ui.snap, marquee, project.components]);
+
+  /*
+   * Two-finger gestures are tracked in the capture phase. A finger that lands on
+   * a device or a conductor is stopped by that element's own handler and would
+   * never reach the canvas, so bubble-phase bookkeeping misses it and a pinch
+   * that starts on top of the drawing does nothing.
+   */
+  const onPointerDownCapture = useCallback(
+    (e: React.PointerEvent) => {
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.current.size === 2) {
+        const [a, b] = [...pointers.current.values()];
+        pinch.current = {
+          dist: Math.hypot(a.x - b.x, a.y - b.y),
+          cx: (a.x + b.x) / 2,
+          cy: (a.y + b.y) / 2,
+        };
+        // Abandon whatever one finger had started; two fingers mean navigation.
+        if (drag.current && drag.current.kind !== 'select' && drag.current.kind !== 'pan') {
+          store.getState().cancelGesture();
+        }
+        drag.current = null;
+        setMarquee(null);
+        setPending(null);
+        e.stopPropagation();
+      }
+    },
+    [store],
+  );
+
+  const onPointerMoveCapture = useCallback((e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size < 2 || !pinch.current) return;
+    e.stopPropagation();
+    const [a, b] = [...pointers.current.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    const cx = (a.x + b.x) / 2;
+    const cy = (a.y + b.y) / 2;
+    const prev = pinch.current;
+    pinch.current = { dist, cx, cy };
+    const r = svgRef.current?.getBoundingClientRect();
+    if (!r || prev.dist <= 0) return;
+    const factor = dist / prev.dist;
+    const px = cx - r.left;
+    const py = cy - r.top;
+    const panX = cx - prev.cx;
+    const panY = cy - prev.cy;
+    setView((v) => {
+      const zoom = Math.min(6, Math.max(0.1, v.zoom * factor));
+      const k = zoom / v.zoom;
+      return { zoom, x: px - (px - v.x) * k + panX, y: py - (py - v.y) * k + panY };
+    });
+  }, []);
+
+  const onPointerUpCapture = useCallback((e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+  }, []);
 
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -351,9 +420,14 @@ export function SchematicCanvas(): JSX.Element {
       <svg
         ref={svgRef}
         className="h-full w-full touch-none select-none"
+        onPointerDownCapture={onPointerDownCapture}
+        onPointerMoveCapture={onPointerMoveCapture}
+        onPointerUpCapture={onPointerUpCapture}
+        onPointerCancelCapture={onPointerUpCapture}
         onPointerDown={onSvgPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
         onPointerLeave={onPointerUp}
         onWheel={onWheel}
         onDragOver={(e) => e.preventDefault()}
@@ -508,6 +582,7 @@ export function SchematicCanvas(): JSX.Element {
               pendingTerminal={pending?.comp === c.id ? pending.terminal : null}
               compatibleTerminals={compatible}
               showTerminals={view.zoom > 0.4}
+              touch={isTouch}
               onPointerDownBody={onPointerDownBody}
               onTerminalClick={onTerminalClick}
               onActivate={(id) => store.getState().select([id])}
@@ -565,19 +640,27 @@ export function SchematicCanvas(): JSX.Element {
       )}
 
       <div className="absolute bottom-2 left-2 flex items-center gap-1 no-print">
-        <button className="btn btn-sm" onClick={() => setView((v) => ({ ...v, zoom: Math.min(6, v.zoom * 1.25) }))}>
+        <button
+          className={isTouch ? 'btn btn-touch' : 'btn btn-sm'}
+          onClick={() => setView((v) => ({ ...v, zoom: Math.min(6, v.zoom * 1.25) }))}
+          aria-label={t('action.zoomIn')}
+        >
           +
         </button>
-        <button className="btn btn-sm" onClick={() => setView((v) => ({ ...v, zoom: Math.max(0.1, v.zoom / 1.25) }))}>
+        <button
+          className={isTouch ? 'btn btn-touch' : 'btn btn-sm'}
+          onClick={() => setView((v) => ({ ...v, zoom: Math.max(0.1, v.zoom / 1.25) }))}
+          aria-label={t('action.zoomOut')}
+        >
           −
         </button>
-        <button className="btn btn-sm" onClick={fit} title={t('action.zoomFit')}>
+        <button className={isTouch ? 'btn btn-touch' : 'btn btn-sm'} onClick={fit} title={t('action.zoomFit')}>
           ⤢
         </button>
         <span className="faint ml-1 text-[11px] mono">{Math.round(view.zoom * 100)} %</span>
       </div>
 
-      {ui.showMinimap && (
+      {ui.showMinimap && !isMobile && (
         <Minimap
           project={project}
           view={view}

@@ -28,6 +28,8 @@ export interface NodeProps {
   pendingTerminal: string | null;
   compatibleTerminals: Set<string> | null;
   showTerminals: boolean;
+  /** Touch input: terminals need a finger-sized hit area. */
+  touch?: boolean;
   onPointerDownBody(e: React.PointerEvent, id: string): void;
   onTerminalClick(e: React.PointerEvent, compId: string, terminalId: string): void;
   onActivate(id: string, e: React.MouseEvent): void;
@@ -107,11 +109,17 @@ function ComponentNodeImpl(p: NodeProps): JSX.Element {
               onPointerDown={(e) => p.onTerminalClick(e, comp.id, tp.id)}
             >
               <title>{tp.def.mark ?? tp.id}</title>
-              <circle cx={tp.x} cy={tp.y} r={7} fill="transparent" className="cursor-crosshair" />
               <circle
                 cx={tp.x}
                 cy={tp.y}
-                r={pending ? 4.5 : compatible ? 4 : 2.6}
+                r={p.touch ? 14 : 7}
+                fill="transparent"
+                className="cursor-crosshair"
+              />
+              <circle
+                cx={tp.x}
+                cy={tp.y}
+                r={(pending ? 4.5 : compatible ? 4 : 2.6) * (p.touch ? 1.5 : 1)}
                 fill={pending ? 'var(--accent)' : compatible ? 'var(--ok)' : potentialColor(v)}
                 stroke={compatible || pending ? 'var(--bg-panel)' : 'none'}
                 strokeWidth={1}

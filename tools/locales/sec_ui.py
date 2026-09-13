@@ -45,6 +45,18 @@ add({
 
 # ---------------------------------------------------------------- canvas
 # Named circuit grouping
+# Compact bars used on a phone
+add({
+"mobile.menu": ["Menu", "Nabídka", "Меню", "Menu", "Меню"],
+"mobile.library": ["Parts", "Prvky", "Елементи", "Elementy", "Элементы"],
+"mobile.tools": ["Tools", "Nástroje", "Інструменти", "Narzędzia", "Инструменты"],
+"mobile.file": ["Project", "Projekt", "Проєкт", "Projekt", "Проект"],
+"mobile.edit": ["Edit", "Úpravy", "Редагування", "Edycja", "Правка"],
+"mobile.viewSettings": ["View", "Zobrazení", "Вигляд", "Widok", "Вид"],
+"mobile.done": ["Done", "Hotovo", "Готово", "Gotowe", "Готово"],
+"mobile.pinchHint": ["Drag to pan, pinch to zoom. Tap a device to select it, tap a terminal to start a conductor.", "Tažením posunete, štípnutím přiblížíte. Klepnutím vyberete přístroj, klepnutím na svorku začnete vodič.", "Тягніть для переміщення, зводьте пальці для масштабу. Торкніться апарата, щоб вибрати, торкніться клеми, щоб почати провідник.", "Przeciągnij, aby przesunąć, uszczypnij, aby przybliżyć. Dotknij aparatu, aby zaznaczyć, dotknij zacisku, aby rozpocząć przewód.", "Тяните для перемещения, сводите пальцы для масштаба. Коснитесь аппарата, чтобы выбрать, коснитесь клеммы, чтобы начать проводник."],
+})
+
 add({
 "circuits.title": ["Circuits", "Obvody", "Кола", "Obwody", "Цепи"],
 "circuits.none": ["No circuits named yet.", "Zatím nejsou pojmenovány žádné obvody.", "Кола ще не названо.", "Nie nazwano jeszcze obwodów.", "Цепи ещё не названы."],

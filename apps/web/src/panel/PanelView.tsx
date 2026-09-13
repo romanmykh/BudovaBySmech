@@ -6,6 +6,7 @@ import {
 import { useProject, rowUsage } from '../store/project.js';
 import { useSim } from '../store/sim.js';
 import { useUi } from '../store/ui.js';
+import { useIsMobile } from '../hooks/useMediaQuery.js';
 import { ratingText } from '../canvas/ComponentNode.js';
 
 /** On-screen size of one 17,5 mm DIN module. */
@@ -30,6 +31,7 @@ export function PanelView(): JSX.Element {
    */
   const dragged = useRef<string | null>(null);
 
+  const isMobile = useIsMobile();
   const modular = useMemo(
     () => project.components.filter((c) => moduleCount(c.type, c.props) > 0),
     [project.components],
@@ -50,8 +52,11 @@ export function PanelView(): JSX.Element {
     });
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <div className="flex-1 overflow-auto p-4" style={{ background: 'var(--canvas)' }}>
+    <div className={`flex h-full overflow-hidden ${isMobile ? 'flex-col overflow-y-auto' : ''}`}>
+      <div
+        className={isMobile ? 'shrink-0 overflow-x-auto p-3' : 'flex-1 overflow-auto p-4'}
+        style={{ background: 'var(--canvas)' }}
+      >
         {!project.enclosures.length ? (
           <div className="flex h-full flex-col items-center justify-center gap-2">
             <div className="dim">{t('panel.noEnclosure')}</div>
@@ -88,7 +93,11 @@ export function PanelView(): JSX.Element {
       </div>
 
       <div
-        className="flex w-72 shrink-0 flex-col overflow-y-auto border-l no-print"
+        className={
+          isMobile
+            ? 'flex w-full flex-col border-t no-print'
+            : 'flex w-72 shrink-0 flex-col overflow-y-auto border-l no-print'
+        }
         style={{ background: 'var(--bg-panel)', borderColor: 'var(--border)' }}
       >
         <div className="border-b p-2.5" style={{ borderColor: 'var(--border)' }}>

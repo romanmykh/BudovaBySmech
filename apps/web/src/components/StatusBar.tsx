@@ -30,7 +30,7 @@ export function StatusBar(): JSX.Element {
 
   return (
     <div
-      className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-0.5 border-t px-2 py-1 text-[11px] no-print mono"
+      className="flex shrink-0 items-center gap-x-4 gap-y-0.5 overflow-x-auto border-t px-2 py-1 text-[11px] whitespace-nowrap no-print mono md:flex-wrap md:whitespace-normal"
       style={{ background: 'var(--bg-panel)', borderColor: 'var(--border)' }}
     >
       <span className="flex items-center gap-1">

@@ -12,6 +12,8 @@ import { Dialogs } from './components/Dialogs.js';
 import { SchematicCanvas } from './canvas/SchematicCanvas.js';
 import { SelectionBar } from './components/SelectionBar.js';
 import { PanelView } from './panel/PanelView.js';
+import { MobileTopBar, MobileBottomBar, MobileMenuSheet, MobileDrawer } from './components/MobileBars.js';
+import { useIsMobile } from './hooks/useMediaQuery.js';
 import { useUi, type SidePanel } from './store/ui.js';
 import { useProject } from './store/project.js';
 import { useSim } from './store/sim.js';
@@ -30,6 +32,67 @@ export function App(): JSX.Element {
   }, []);
 
   useKeyboardShortcuts();
+  const isMobile = useIsMobile();
+
+  // The side panels do not fit beside the canvas on a phone, so they become
+  // overlay drawers reached from the bottom bar.
+  const sidePanels = (
+    <>
+      <div className="flex shrink-0 border-b" style={{ borderColor: 'var(--border)' }}>
+        {(['inspector', 'faults', 'instruments', 'log'] as SidePanel[]).map((p) => (
+          <button
+            key={p}
+            className="btn btn-sm min-w-0 flex-1 justify-center truncate !rounded-none !border-0 !px-1 !text-[11px]"
+            data-on={ui.sidePanel === p}
+            onClick={() => ui.set('sidePanel', p)}
+            title={t(
+              p === 'inspector' ? 'inspector.title'
+              : p === 'faults' ? 'fault.title'
+              : p === 'instruments' ? 'inst.title'
+              : 'log.title',
+            )}
+          >
+            <span className="truncate">{t(`tab.${p}`)}</span>
+          </button>
+        ))}
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {ui.sidePanel === 'inspector' && <Inspector />}
+        {ui.sidePanel === 'faults' && <FaultPanel />}
+        {ui.sidePanel === 'instruments' && <InstrumentPanel />}
+        {ui.sidePanel === 'log' && <LogPanel />}
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="flex h-full flex-col">
+        <MobileTopBar />
+        <div className="relative min-h-0 flex-1">
+          {view === 'schematic' && (
+            <>
+              <SchematicCanvas />
+              <SelectionBar />
+            </>
+          )}
+          {view === 'panel' && <PanelView />}
+          {view === 'report' && <ReportPanel />}
+        </div>
+        <StatusBar />
+        <MobileBottomBar />
+        <MobileDrawer side="library">
+          <LibraryPanel />
+        </MobileDrawer>
+        <MobileDrawer side="side">
+          <div className="flex h-full flex-col">{sidePanels}</div>
+        </MobileDrawer>
+        <MobileMenuSheet />
+        <Dialogs />
+        <Toast />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -60,30 +123,7 @@ export function App(): JSX.Element {
             className="flex w-72 shrink-0 flex-col border-l no-print"
             style={{ background: 'var(--bg-panel)', borderColor: 'var(--border)' }}
           >
-            <div className="flex shrink-0 border-b" style={{ borderColor: 'var(--border)' }}>
-              {(['inspector', 'faults', 'instruments', 'log'] as SidePanel[]).map((p) => (
-                <button
-                  key={p}
-                  className="btn btn-sm min-w-0 flex-1 justify-center truncate !rounded-none !border-0 !px-1 !text-[11px]"
-                  data-on={ui.sidePanel === p}
-                  onClick={() => ui.set('sidePanel', p)}
-                  title={t(
-                    p === 'inspector' ? 'inspector.title'
-                    : p === 'faults' ? 'fault.title'
-                    : p === 'instruments' ? 'inst.title'
-                    : 'log.title',
-                  )}
-                >
-                  <span className="truncate">{t(`tab.${p}`)}</span>
-                </button>
-              ))}
-            </div>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              {ui.sidePanel === 'inspector' && <Inspector />}
-              {ui.sidePanel === 'faults' && <FaultPanel />}
-              {ui.sidePanel === 'instruments' && <InstrumentPanel />}
-              {ui.sidePanel === 'log' && <LogPanel />}
-            </div>
+            {sidePanels}
           </div>
         )}
       </div>

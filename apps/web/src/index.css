@@ -73,6 +73,15 @@ body {
   font-family: var(--font-sans);
   font-size: 13px;
   overflow: hidden;
+  /* No rubber-band scroll behind the app, and no lag before a tap registers. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Use the real viewport height on phones, where the browser chrome moves. */
+@supports (height: 100dvh) {
+  html, body, #root { height: 100dvh; }
 }
 
 /* Scrollbars that do not shout. */
@@ -91,6 +100,34 @@ input[type="text"], input[type="number"], input[type="email"], input[type="passw
   width: 100%;
   outline: none;
 }
+
+/*
+ * Coarse pointer: bigger controls, and a 16 px font in fields so that iOS does
+ * not zoom the page when one is focused.
+ */
+@media (pointer: coarse) {
+  .btn { min-height: 36px; padding: 7px 11px; }
+  .btn-sm { min-height: 32px; padding: 5px 9px; font-size: 12px; }
+  input[type="text"], input[type="number"], input[type="email"], input[type="password"],
+  select, textarea {
+    font-size: 16px;
+    padding: 7px 8px;
+  }
+  input[type="checkbox"] { width: 20px; height: 20px; }
+  input[type="color"] { min-height: 32px; }
+}
+
+/* Phone layout: dialogs fill the screen rather than floating in a corner. */
+@media (max-width: 900px) {
+  .dialog-sheet {
+    max-width: none !important;
+    width: 100% !important;
+    min-height: 100%;
+    border-radius: 0 !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  .dialog-backdrop { padding: 0 !important; }
+}
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; }
@@ -108,6 +145,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px;
 .btn:disabled { opacity: .45; cursor: default; }
 .btn-sm { padding: 2px 6px; font-size: 12px; }
 .btn-danger { color: var(--fail); }
+/* Comfortable for a thumb; the recommended minimum is around 44 px. */
+.btn-touch { min-height: 40px; padding: 8px 12px; }
+button, .btn, select, input[type="checkbox"] { touch-action: manipulation; }
 
 .panel { background: var(--bg-panel); border: 1px solid var(--border); }
 .divider { border-color: var(--border); }

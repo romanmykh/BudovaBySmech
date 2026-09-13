@@ -14,6 +14,11 @@ Languages: English, Čeština, Українська, Polski, Русский.
 install, no localhost. That deployment runs the whole simulator in the browser
 and keeps projects in local storage; see [GitHub Pages](#github-pages) below.
 
+It works on a phone as well as at a desk. Below 900 px the library and the
+inspector become drawers reached from a bottom bar, the toolbar collapses into a
+menu sheet, and the canvas takes the rest of the screen: drag to pan, pinch to
+zoom, tap a device to select it, tap a terminal to start a conductor.
+
 ## Running it
 
 ```bash

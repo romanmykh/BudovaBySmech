@@ -40,12 +40,12 @@ function Modal({ children }: { children: React.ReactNode }): JSX.Element {
   }, []);
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 no-print"
+      className="dialog-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 no-print"
       style={{ background: 'rgba(0,0,0,.45)' }}
       onPointerDown={(e) => e.target === e.currentTarget && close()}
     >
       <div
-        className="fade-in w-full max-w-2xl rounded-lg p-4 shadow-xl"
+        className="dialog-sheet fade-in w-full max-w-2xl rounded-lg p-4 shadow-xl"
         style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)' }}
       >
         {children}

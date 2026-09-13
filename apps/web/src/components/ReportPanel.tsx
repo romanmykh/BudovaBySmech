@@ -59,7 +59,7 @@ export function ReportPanel(): JSX.Element {
           <div className="font-semibold">{t('report.title')}</div>
           <div className="faint text-[11px]">{t('report.subtitle')}</div>
         </div>
-        <div className="ml-2 flex gap-1">
+        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 md:ml-2">
           {(['all', 'fail', 'warn', 'pass', 'na'] as const).map((s) => (
             <button key={s} className="btn btn-sm" data-on={filter === s} onClick={() => setFilter(s)}>
               {s === 'all' ? t('report.all') : t(`report.${s}`)}
@@ -67,7 +67,7 @@ export function ReportPanel(): JSX.Element {
             </button>
           ))}
         </div>
-        <div className="ml-auto flex gap-1">
+        <div className="flex gap-1 md:ml-auto">
           <button className="btn btn-sm" onClick={() => runCheck()}>
             {t('action.check')}
           </button>

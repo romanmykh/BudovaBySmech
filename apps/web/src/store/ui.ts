@@ -35,6 +35,8 @@ interface UiState {
   highlightWires: string[];
   toast: { text: string; kind: 'info' | 'error' } | null;
   dialog: null | 'auth' | 'projects' | 'templates' | 'shortcuts' | 'settings' | 'export';
+  /** Which panel is shown as an overlay drawer on a phone. */
+  drawer: null | 'library' | 'side' | 'menu';
   setTheme(t: 'light' | 'dark'): void;
   toggleTheme(): void;
   set<K extends keyof UiState>(k: K, v: UiState[K]): void;
@@ -59,6 +61,7 @@ export const useUi = create<UiState>((set) => ({
   highlightWires: [],
   toast: null,
   dialog: null,
+  drawer: null,
   setTheme: (t) => {
     document.documentElement.classList.toggle('dark', t === 'dark');
     try {

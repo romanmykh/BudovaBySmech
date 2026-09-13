@@ -10,6 +10,10 @@ circuits to sockets, cooker, boiler and an EV wallbox.
 
 Languages: English, Čeština, Українська, Polski, Русский.
 
+**Open it in a browser: https://romanmykh.github.io/BudovaBySmech/** — nothing to
+install, no localhost. That deployment runs the whole simulator in the browser
+and keeps projects in local storage; see [GitHub Pages](#github-pages) below.
+
 ## Running it
 
 ```bash
@@ -30,6 +34,38 @@ npm start              # serves the built front end and the API from one process
 Environment variables for the server: `PORT` (8787), `DB_FILE`
 (`data/budova.sqlite`), `JWT_SECRET`. The whole thing runs on one small VPS.
 
+## GitHub Pages
+
+`.github/workflows/pages.yml` builds `apps/web` and publishes it on every push
+to the default branch. Two build-time settings make it work under the repository
+subpath:
+
+| Variable | Value on Pages | Effect |
+|---|---|---|
+| `BASE_PATH` | `/BudovaBySmech/` | Vite rewrites every asset URL to the subpath |
+| `VITE_API_BASE` | `off` | No backend: the app never calls an API |
+
+Pages is static, so the Express API is not deployed with it. Everything that
+does not need a server works exactly as it does locally — the solver, fault
+injection, the instruments, the panel view, the design rule check, the exports
+and all five languages. Projects are kept in the browser and moved between
+machines with Export / Import; the sign-in screen is replaced by a note saying
+so. Point the same build at a server by setting `VITE_API_BASE` to its URL, and
+accounts come back with no other change.
+
+`404.html` is a copy of `index.html`, which is how a static host answers a deep
+link into a single-page app.
+
+**One-time repository setting:** Settings → Pages → Build and deployment →
+Source: **GitHub Actions**.
+
+To reproduce the Pages build locally:
+
+```bash
+cd apps/web
+BASE_PATH=/BudovaBySmech/ VITE_API_BASE=off npx vite build
+```
+
 ## Layout
 
 ```
@@ -39,6 +75,11 @@ apps/server       Express + SQLite + bcrypt + JWT
 tools/locales     the single table the five locale files are generated from
 docs/             project JSON schema
 ```
+
+Imports carry the `.js` extension, so TypeScript must never emit next to its
+sources — a stale `foo.js` would shadow the `foo.ts` it came from and the
+bundler would silently build the old code. No build script emits into `src/`,
+and `.gitignore` blocks it.
 
 ## The engine
 

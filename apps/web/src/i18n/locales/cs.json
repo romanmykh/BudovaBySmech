@@ -61,6 +61,8 @@
   "app.guest": "Host",
   "app.guestHint": "Projekty jsou uloženy jen v tomto prohlížeči",
   "app.loading": "Načítání…",
+  "app.localOnly": "Tato instalace běží bez serveru: projekty jsou uloženy v tomto prohlížeči. Pro přenos mezi počítači použijte Export a Import.",
+  "app.localOnlyShort": "Jen lokálně",
   "app.offline": "Server není dostupný — pracuje se lokálně",
   "app.short": "Simulátor instalace",
   "app.title": "Simulátor elektroinstalace",

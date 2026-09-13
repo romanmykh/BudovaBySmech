@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { api, ApiError, storeToken, storedToken, type ApiUser, type ProjectSummary } from '../api/client.js';
+import {
+  api, ApiError, storeToken, storedToken, API_AVAILABLE, API_BASE,
+  type ApiUser, type ProjectSummary,
+} from '../api/client.js';
 import { localStore } from '../storage/local.js';
 import { useProject } from './project.js';
 import { uid, type Project } from '@budova/engine';
@@ -38,11 +41,17 @@ export const useAuth = create<AuthState>((set, get) => ({
   lastSavedAt: null,
 
   init: async () => {
+    // A build without a backend never pretends one might appear.
+    if (!API_AVAILABLE) {
+      set({ checked: true, serverUp: false });
+      return;
+    }
     if (!storedToken()) {
       set({ checked: true });
       // Still probe the server so the UI knows whether signing in is possible.
       try {
-        await fetch('/api/health');
+        const res = await fetch(`${API_BASE}/health`);
+        if (!res.ok) set({ serverUp: false });
       } catch {
         set({ serverUp: false });
       }

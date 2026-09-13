@@ -97,6 +97,25 @@ function AuthDialog(): JSX.Element {
     }
   };
 
+  if (!auth.serverUp && !auth.user) {
+    return (
+      <>
+        <Head title={t('app.localOnlyShort')} />
+        <div className="flex flex-col gap-2 text-xs">
+          <p className="dim">{t('app.localOnly')}</p>
+          <div className="flex gap-2">
+            <button className="btn" onClick={() => ui.set('dialog', 'projects')}>
+              {t('project.title')}
+            </button>
+            <button className="btn" onClick={() => ui.set('dialog', 'export')}>
+              {t('action.export')}
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (auth.user) {
     return (
       <>

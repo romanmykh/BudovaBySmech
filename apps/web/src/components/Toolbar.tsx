@@ -165,8 +165,16 @@ export function Toolbar(): JSX.Element {
           {ui.theme === 'dark' ? '☀' : '☾'}
         </button>
         <LanguageSwitcher />
-        <button className="btn btn-sm" onClick={() => ui.set('dialog', 'auth')} title={auth.user?.email}>
-          {auth.user ? auth.user.email.split('@')[0] : t('auth.signIn')}
+        <button
+          className="btn btn-sm"
+          onClick={() => ui.set('dialog', 'auth')}
+          title={auth.user?.email ?? (auth.serverUp ? undefined : t('app.localOnly'))}
+        >
+          {auth.user
+            ? auth.user.email.split('@')[0]
+            : auth.serverUp
+              ? t('auth.signIn')
+              : t('app.localOnlyShort')}
         </button>
       </div>
     </div>

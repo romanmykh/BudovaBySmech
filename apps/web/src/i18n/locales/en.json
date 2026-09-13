@@ -61,6 +61,8 @@
   "app.guest": "Guest",
   "app.guestHint": "Projects are stored in this browser only",
   "app.loading": "Loading…",
+  "app.localOnly": "This copy runs without a server: projects are kept in this browser. Use Export and Import to move them between machines.",
+  "app.localOnlyShort": "Local only",
   "app.offline": "Server unavailable — working locally",
   "app.short": "Installation simulator",
   "app.title": "Electrical installation simulator",

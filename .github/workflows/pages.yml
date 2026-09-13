@@ -1,0 +1,79 @@
+# Builds the editor and publishes it to GitHub Pages.
+#
+# GitHub Pages is static, so the Express API is not part of this deployment:
+# the build sets VITE_API_BASE=off and the app runs entirely in the browser,
+# keeping projects in localStorage. Everything else — the solver, the design
+# rule check, the panel view, the exports and all five languages — works.
+#
+# Repository setting required once: Settings → Pages → Build and deployment →
+# Source: "GitHub Actions".
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'claude/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push supersedes one already in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test the engine and the localisation
+        run: npm test
+
+      - name: Build the editor for the repository subpath
+        working-directory: apps/web
+        env:
+          # Served from https://<owner>.github.io/<repo>/
+          BASE_PATH: /${{ github.event.repository.name }}/
+          # No backend on Pages.
+          VITE_API_BASE: 'off'
+        run: npx vite build
+
+      - name: Prepare the Pages artifact
+        working-directory: apps/web/dist
+        run: |
+          # Pages serves unknown paths as 404; the app is a single page, so the
+          # same document answers a deep link.
+          cp index.html 404.html
+          # Keep Jekyll's hands off the build output.
+          touch .nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

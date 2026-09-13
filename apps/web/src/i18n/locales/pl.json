@@ -61,6 +61,8 @@
   "app.guest": "Gość",
   "app.guestHint": "Projekty zapisane tylko w tej przeglądarce",
   "app.loading": "Ładowanie…",
+  "app.localOnly": "Ta wersja działa bez serwera: projekty są zapisane w tej przeglądarce. Do przenoszenia między komputerami użyj eksportu i importu.",
+  "app.localOnlyShort": "Tylko lokalnie",
   "app.offline": "Serwer niedostępny — praca lokalna",
   "app.short": "Symulator instalacji",
   "app.title": "Symulator instalacji elektrycznej",

@@ -16,6 +16,8 @@ add({
 "app.guest": ["Guest", "Host", "Гість", "Gość", "Гость"],
 "app.guestHint": ["Projects are stored in this browser only", "Projekty jsou uloženy jen v tomto prohlížeči", "Проєкти зберігаються лише в цьому браузері", "Projekty zapisane tylko w tej przeglądarce", "Проекты хранятся только в этом браузере"],
 "app.loading": ["Loading…", "Načítání…", "Завантаження…", "Ładowanie…", "Загрузка…"],
+"app.localOnly": ["This copy runs without a server: projects are kept in this browser. Use Export and Import to move them between machines.", "Tato instalace běží bez serveru: projekty jsou uloženy v tomto prohlížeči. Pro přenos mezi počítači použijte Export a Import.", "Ця версія працює без сервера: проєкти зберігаються в цьому браузері. Для перенесення між комп'ютерами скористайтеся експортом та імпортом.", "Ta wersja działa bez serwera: projekty są zapisane w tej przeglądarce. Do przenoszenia między komputerami użyj eksportu i importu.", "Эта версия работает без сервера: проекты хранятся в этом браузере. Для переноса между компьютерами используйте экспорт и импорт."],
+"app.localOnlyShort": ["Local only", "Jen lokálně", "Лише локально", "Tylko lokalnie", "Только локально"],
 "app.offline": ["Server unavailable — working locally", "Server není dostupný — pracuje se lokálně", "Сервер недоступний — робота локально", "Serwer niedostępny — praca lokalna", "Сервер недоступен — работа локально"],
 "view.schematic": ["Schematic", "Schéma", "Схема", "Schemat", "Схема"],
 "view.panel": ["Panel", "Rozvaděč", "Щит", "Rozdzielnica", "Щит"],

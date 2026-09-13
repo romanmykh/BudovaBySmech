@@ -7,3 +7,11 @@ dist/
 data/
 .DS_Store
 coverage/
+
+# TypeScript must never emit next to its sources: every import in this repo uses
+# the .js extension, so a stale emit silently shadows the .ts file it came from.
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+apps/*/src/**/*.js
+apps/*/src/**/*.d.ts
+*.tsbuildinfo

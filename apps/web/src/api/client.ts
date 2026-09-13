@@ -14,6 +14,19 @@ export interface ProjectSummary {
 
 const TOKEN_KEY = 'budova.token';
 
+/**
+ * Where the API lives. A static deployment — GitHub Pages, or the built files
+ * opened from disk — has no backend at all; that build sets VITE_API_BASE to
+ * "off" and the client then works entirely in the browser instead of firing
+ * requests that can only 404.
+ */
+declare const __API_BASE__: string | undefined;
+
+const RAW_API_BASE = typeof __API_BASE__ === 'string' ? __API_BASE__ : '/api';
+
+export const API_AVAILABLE = RAW_API_BASE !== 'off' && RAW_API_BASE !== '';
+export const API_BASE = RAW_API_BASE.replace(/\/+$/, '');
+
 export function storedToken(): string | null {
   try {
     return localStorage.getItem(TOKEN_KEY);
@@ -41,10 +54,11 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  if (!API_AVAILABLE) throw new ApiError('offline', 0);
   const token = storedToken();
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${API_BASE}${path}`, {
       ...init,
       credentials: 'include',
       headers: {

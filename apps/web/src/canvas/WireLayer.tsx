@@ -50,20 +50,19 @@ function WireLayerImpl(p: WireLayerProps): JSX.Element {
         const mid = polylineMid(pts);
 
         return (
-          <g key={w.id} onPointerDown={(e) => p.onSelect(e, w.id)}>
-            {/* generous hit area; a double-click drops a bend point on the run */}
-            <path
-              d={d}
-              stroke="transparent"
-              strokeWidth={10}
-              fill="none"
-              className="cursor-pointer"
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                const pt = p.toWorld(e);
-                p.onAddBend(w.id, pt.x, pt.y);
-              }}
-            />
+          <g
+            key={w.id}
+            data-wire={w.id}
+            onPointerDown={(e) => p.onSelect(e, w.id)}
+            onDoubleClick={(e) => {
+              // A double-click anywhere along the run drops a bend point there.
+              e.stopPropagation();
+              const pt = p.toWorld(e);
+              p.onAddBend(w.id, pt.x, pt.y);
+            }}
+          >
+            {/* generous hit area */}
+            <path d={d} stroke="transparent" strokeWidth={10} fill="none" className="cursor-pointer" />
             {(isSel || isHi) && (
               <path
                 d={d}

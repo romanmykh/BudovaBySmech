@@ -71,6 +71,7 @@
   "auth.signOut": "Sign out",
   "auth.signUp": "Sign up",
   "canvas.addBend": "Double-click a conductor to add a bend point",
+  "canvas.alreadyConnected": "These two terminals are already joined by a conductor.",
   "canvas.emptyHint": "Drag a component from the library, or start from a template.",
   "canvas.emptyTitle": "Empty canvas",
   "canvas.incompatible": "These terminals cannot be connected with this conductor.",

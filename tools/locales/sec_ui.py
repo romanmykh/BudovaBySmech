@@ -52,6 +52,7 @@ add({
 "canvas.incompatible": ["These terminals cannot be connected with this conductor.", "Tyto svorky nelze tímto vodičem spojit.", "Ці клеми не можна з'єднати цим провідником.", "Tych zacisków nie można połączyć tym przewodem.", "Эти клеммы нельзя соединить этим проводником."],
 "canvas.role": ["Conductor to draw", "Kreslený vodič", "Провідник для креслення", "Rysowany przewód", "Рисуемый проводник"],
 "canvas.addBend": ["Double-click a conductor to add a bend point", "Dvojklik na vodič přidá lomový bod", "Подвійний клац по провіднику додає точку зламу", "Podwójne kliknięcie dodaje punkt załamania", "Двойной щелчок добавляет точку излома"],
+"canvas.alreadyConnected": ["These two terminals are already joined by a conductor.", "Tyto dvě svorky už jsou spojeny vodičem.", "Ці дві клеми вже з'єднані провідником.", "Te dwa zaciski są już połączone przewodem.", "Эти две клеммы уже соединены проводником."],
 "canvas.note": ["Note", "Poznámka", "Примітка", "Notatka", "Заметка"],
 "canvas.notePlaceholder": ["Type a note…", "Napište poznámku…", "Введіть примітку…", "Wpisz notatkę…", "Введите заметку…"],
 })

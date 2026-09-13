@@ -101,7 +101,12 @@ function ComponentNodeImpl(p: NodeProps): JSX.Element {
           const pending = p.pendingTerminal === tp.id;
           const compatible = p.compatibleTerminals?.has(`${comp.id}:${tp.id}`);
           return (
-            <g key={tp.id} onPointerDown={(e) => p.onTerminalClick(e, comp.id, tp.id)}>
+            <g
+              key={tp.id}
+              data-terminal={tp.id}
+              onPointerDown={(e) => p.onTerminalClick(e, comp.id, tp.id)}
+            >
+              <title>{tp.def.mark ?? tp.id}</title>
               <circle cx={tp.x} cy={tp.y} r={7} fill="transparent" className="cursor-crosshair" />
               <circle
                 cx={tp.x}

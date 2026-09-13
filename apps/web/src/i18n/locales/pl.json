@@ -71,6 +71,7 @@
   "auth.signOut": "Wyloguj",
   "auth.signUp": "Zarejestruj się",
   "canvas.addBend": "Podwójne kliknięcie dodaje punkt załamania",
+  "canvas.alreadyConnected": "Te dwa zaciski są już połączone przewodem.",
   "canvas.emptyHint": "Przeciągnij element z biblioteki albo zacznij od szablonu.",
   "canvas.emptyTitle": "Pusty obszar roboczy",
   "canvas.incompatible": "Tych zacisków nie można połączyć tym przewodem.",

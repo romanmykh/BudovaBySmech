@@ -23,11 +23,20 @@ interface ProjectState {
   past: Project[];
   future: Project[];
   clipboard: { components: ComponentInstance[]; wires: Wire[] } | null;
+  /** Snapshot taken when a drag gesture starts, so undo can return to it. */
+  gesture: Project | null;
 
   loadProject(p: Project, id: string | null, storage: StorageKind): void;
   commit(mutate: (p: Project) => void): void;
   /** Change without pushing a history entry — used while dragging. */
   touch(mutate: (p: Project) => void): void;
+  /**
+   * Drag gestures update the project continuously but must leave exactly one
+   * history entry, holding the state from *before* the drag started.
+   */
+  beginGesture(): void;
+  endGesture(mutate?: (p: Project) => void): void;
+  cancelGesture(): void;
   undo(): void;
   redo(): void;
   markSaved(id?: string | null, storage?: StorageKind): void;
@@ -76,6 +85,7 @@ export const useProject = create<ProjectState>((set, get) => ({
   past: [],
   future: [],
   clipboard: null,
+  gesture: null,
 
   loadProject: (p, id, storage) =>
     set({
@@ -87,6 +97,7 @@ export const useProject = create<ProjectState>((set, get) => ({
       selectedWires: [],
       past: [],
       future: [],
+      gesture: null,
     }),
 
   commit: (mutate) =>
@@ -105,6 +116,26 @@ export const useProject = create<ProjectState>((set, get) => ({
       mutate(next);
       return { project: next, dirty: true };
     }),
+
+  beginGesture: () => set((s) => ({ gesture: s.gesture ?? s.project })),
+
+  endGesture: (mutate) =>
+    set((s) => {
+      const before = s.gesture;
+      const next = clone(s.project);
+      if (mutate) mutate(next);
+      next.meta.updatedAt = new Date().toISOString();
+      if (!before) return { project: next, gesture: null, dirty: true };
+      return {
+        project: next,
+        gesture: null,
+        past: [...s.past, before].slice(-HISTORY_LIMIT),
+        future: [],
+        dirty: true,
+      };
+    }),
+
+  cancelGesture: () => set({ gesture: null }),
 
   undo: () =>
     set((s) => {

@@ -4,7 +4,13 @@ import { svgToPng } from './svg.js';
 
 type TFn = (key: string, options?: any) => string;
 
-/** The schematic or the panel layout as a landscape A4 PDF. */
+/**
+ * The schematic or the panel layout as an A4 PDF.
+ *
+ * The drawing is line art, so it is rasterised at a print-usable density and
+ * then flate-compressed — embedding it raw produces a file of several megabytes
+ * for no visible gain.
+ */
 export async function exportDrawingPdf(el: SVGSVGElement, name: string): Promise<void> {
   const blob = await svgToPng(el, 2);
   const dataUrl = await blobToDataUrl(blob);
@@ -17,7 +23,7 @@ export async function exportDrawingPdf(el: SVGSVGElement, name: string): Promise
   const scale = Math.min((pw - margin * 2) / img.width, (ph - margin * 2 - 8) / img.height);
   doc.setFontSize(10);
   doc.text(name, margin, margin);
-  doc.addImage(dataUrl, 'PNG', margin, margin + 4, img.width * scale, img.height * scale);
+  doc.addImage(dataUrl, 'PNG', margin, margin + 4, img.width * scale, img.height * scale, undefined, 'MEDIUM');
   doc.save(`${name}.pdf`);
 }
 

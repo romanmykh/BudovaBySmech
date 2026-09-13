@@ -110,7 +110,7 @@ export function SchematicCanvas(): JSX.Element {
         points: [],
         installMethod: project.settings.defaultInstallMethod,
       });
-      if (!id) ui.showToast(t('canvas.incompatible'), 'error');
+      if (!id) ui.showToast(t('canvas.alreadyConnected'), 'error');
       setPending(null);
     },
     [pending, store, ui, project.settings.defaultInstallMethod, t],
@@ -151,6 +151,7 @@ export function SchematicCanvas(): JSX.Element {
         return;
       }
       if (!selection.includes(id)) store.getState().toggleSelect(id, e.shiftKey);
+      store.getState().beginGesture();
       drag.current = { kind: 'move', startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false };
       (e.target as Element).setPointerCapture?.(e.pointerId);
     },
@@ -220,22 +221,26 @@ export function SchematicCanvas(): JSX.Element {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
-    if (d.kind === 'move' && d.moved) {
-      // Snap the whole selection to the grid once, at the end of the drag.
-      store.getState().commit((p) => {
-        const ids = new Set(store.getState().selection);
-        for (const c of p.components) {
-          if (ids.has(c.id)) {
-            c.x = snap(c.x, ui.snap);
-            c.y = snap(c.y, ui.snap);
+    if (d.kind === 'move') {
+      if (d.moved) {
+        // Snap the whole selection to the grid once, at the end of the drag.
+        store.getState().endGesture((p) => {
+          const ids = new Set(store.getState().selection);
+          for (const c of p.components) {
+            if (ids.has(c.id)) {
+              c.x = snap(c.x, ui.snap);
+              c.y = snap(c.y, ui.snap);
+            }
           }
-        }
-      });
+        });
+      } else {
+        // A click that selected something is not a history entry.
+        store.getState().cancelGesture();
+      }
     }
-    if (d.kind === 'bend' && d.moved) {
-      store.getState().commit(() => {
-        /* the position is already applied; this records it in the history */
-      });
+    if (d.kind === 'bend') {
+      if (d.moved) store.getState().endGesture();
+      else store.getState().cancelGesture();
     }
     if (d.kind === 'select' && marquee && (marquee.w > 4 || marquee.h > 4)) {
       const hits = project.components
@@ -403,6 +408,7 @@ export function SchematicCanvas(): JSX.Element {
             }}
             onBendDown={(e, id, index) => {
               store.getState().select([], [id]);
+              store.getState().beginGesture();
               drag.current = {
                 kind: 'bend',
                 startX: e.clientX,

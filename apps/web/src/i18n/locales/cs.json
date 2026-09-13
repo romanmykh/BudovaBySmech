@@ -71,6 +71,7 @@
   "auth.signOut": "Odhlásit",
   "auth.signUp": "Registrovat",
   "canvas.addBend": "Dvojklik na vodič přidá lomový bod",
+  "canvas.alreadyConnected": "Tyto dvě svorky už jsou spojeny vodičem.",
   "canvas.emptyHint": "Přetáhněte prvek z knihovny nebo začněte ze šablony.",
   "canvas.emptyTitle": "Prázdná plocha",
   "canvas.incompatible": "Tyto svorky nelze tímto vodičem spojit.",

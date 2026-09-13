@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from 'react';
+import { useMemo, useRef, useState, type JSX } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getDef, effectiveProps, moduleCount, type ComponentInstance, type Enclosure,
@@ -23,7 +23,12 @@ export function PanelView(): JSX.Element {
   const results = useSim((s) => s.results);
   const operate = useSim((s) => s.operate);
   const running = useSim((s) => s.running);
-  const [dragType, setDragType] = useState<string | null>(null);
+  /*
+   * The id of the device being dragged is kept in a ref rather than in state:
+   * dragstart and drop can arrive in the same tick, and a state update would
+   * not have landed by then.
+   */
+  const dragged = useRef<string | null>(null);
 
   const modular = useMemo(
     () => project.components.filter((c) => moduleCount(c.type, c.props) > 0),
@@ -67,9 +72,10 @@ export function PanelView(): JSX.Element {
                 onSelect={(id) => store.getState().select([id])}
                 onOperate={(id) => operate(id, 'toggle')}
                 onDropDevice={(row, slot) => {
-                  if (!dragType) return;
-                  store.getState().placeInPanel(dragType, e.id, row, slot);
-                  setDragType(null);
+                  const id = dragged.current;
+                  if (!id) return;
+                  store.getState().placeInPanel(id, e.id, row, slot);
+                  dragged.current = null;
                 }}
                 onRemove={(id) => store.getState().removeFromPanel(id)}
               />
@@ -94,7 +100,12 @@ export function PanelView(): JSX.Element {
               <li
                 key={c.id}
                 draggable
-                onDragStart={() => setDragType(c.id)}
+                onDragStart={() => {
+                  dragged.current = c.id;
+                }}
+                onDragEnd={() => {
+                  dragged.current = null;
+                }}
                 className="flex cursor-grab items-center gap-2 rounded px-1.5 py-1 text-xs"
                 style={{ background: 'var(--bg-sunken)' }}
               >

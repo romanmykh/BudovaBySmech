@@ -5,7 +5,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { db, type ProjectRow, type UserRow } from './db.js';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -241,9 +242,15 @@ app.post('/api/projects/import', requireAuth, (req: AuthedRequest, res: Response
 app.get('/api/health', (_req: Request, res: Response) => res.json({ ok: true }));
 
 // Serve the built front end when it is present, so the whole thing runs from
-// one process on a single small host.
-const webDist = resolve(process.cwd(), '../web/dist');
-if (existsSync(webDist)) {
+// one process on a single small host. The path is resolved against this file
+// rather than the working directory, so `npm start` works from anywhere.
+const here = dirname(fileURLToPath(import.meta.url));
+const webDist = [
+  resolve(here, '../../web/dist'),
+  resolve(here, '../web/dist'),
+  resolve(process.cwd(), 'apps/web/dist'),
+].find((p) => existsSync(p));
+if (webDist) {
   app.use(express.static(webDist));
   app.get(/^(?!\/api\/).*/, (_req: Request, res: Response) => {
     res.sendFile(resolve(webDist, 'index.html'));

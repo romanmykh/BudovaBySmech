@@ -39,6 +39,23 @@ npm start              # serves the built front end and the API from one process
 Environment variables for the server: `PORT` (8787), `DB_FILE`
 (`data/budova.sqlite`), `JWT_SECRET`. The whole thing runs on one small VPS.
 
+## Symbol directory
+
+A second, deliberately tiny page lives next to the editor: a searchable
+directory of 526 symbols taken from the IEC 60617 symbol tables, in English,
+Czech, Russian and Polish, each downloadable as SVG or PNG. The artwork is
+vectorised out of the source document rather than redrawn, and every card cites
+its source page. Three static files, no framework, no build.
+
+**Open it: https://romanmykh.github.io/BudovaBySmech/symbols/**
+
+```bash
+npm run symbols                       # http://localhost:8080
+python3 tools/symbols/build.py <pdf>  # regenerate the symbol data
+```
+
+See [apps/symbols/README.md](apps/symbols/README.md).
+
 ## GitHub Pages
 
 `.github/workflows/pages.yml` builds `apps/web` and publishes it on every push
@@ -77,7 +94,9 @@ BASE_PATH=/BudovaBySmech/ VITE_API_BASE=off npx vite build
 packages/engine   simulation engine — pure TypeScript, no React, unit tested
 apps/web          React + Vite editor
 apps/server       Express + SQLite + bcrypt + JWT
+apps/symbols      static EN/CZ directory of IEC 60617 symbols (no build step)
 tools/locales     the single table the five locale files are generated from
+tools/symbols     extracts the symbols from the IEC 60617 source PDF
 docs/             project JSON schema
 ```
 

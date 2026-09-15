@@ -16,7 +16,9 @@
     "test": "npm run test --workspace=packages/engine && npm run test --workspace=apps/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "start": "node apps/server/dist/index.js",
-    "locales": "python3 tools/locales/build.py"
+    "locales": "python3 tools/locales/build.py",
+    "symbols": "python3 -m http.server 8080 --directory apps/symbols",
+    "symbols:build": "python3 tools/symbols/build.py"
   },
   "engines": {
     "node": ">=20"

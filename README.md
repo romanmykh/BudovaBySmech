@@ -42,10 +42,12 @@ Environment variables for the server: `PORT` (8787), `DB_FILE`
 ## Symbol directory
 
 A second, deliberately tiny page lives next to the editor: a searchable
-directory of 526 symbols taken from the IEC 60617 symbol tables, bilingual
-EN/CZ, each downloadable as SVG or PNG. The artwork is vectorised out of the
-source document rather than redrawn, and every card cites its source page.
-Three static files, no framework, no build.
+directory of 526 symbols taken from the IEC 60617 symbol tables, in English,
+Czech, Russian and Polish, each downloadable as SVG or PNG. The artwork is
+vectorised out of the source document rather than redrawn, and every card cites
+its source page. Three static files, no framework, no build.
+
+**Open it: https://romanmykh.github.io/BudovaBySmech/symbols/**
 
 ```bash
 npm run symbols                       # http://localhost:8080

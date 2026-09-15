@@ -3,6 +3,7 @@
   'use strict';
 
   const VIEWBOX = '0 0 120 80';
+  const LANGS = ['cs', 'en', 'ru', 'pl'];
   const UI = {
     cs: {
       title: 'Značky IEC 60617',
@@ -10,10 +11,9 @@
       all: 'Vše',
       empty: 'Nic nenalezeno. Zkuste jiné slovo nebo jinou kategorii.',
       count: n => `${n} ${n === 1 ? 'značka' : n < 5 ? 'značky' : 'značek'}`,
-      note: 'Všechny značky jsou převzaty z tabulek IEC 60617 — grafika je vektorizována přímo ze zdrojového ' +
-            'dokumentu, nikoli překreslena. U každé značky je uvedena strana zdroje. Anglický název je původní ' +
-            'znění normy, český je překlad.',
-      svg: 'SVG', png: 'PNG',
+      note: 'Všechny značky jsou převzaty z tabulek IEC 60617 — grafika je vektorizována přímo ze ' +
+            'zdrojového dokumentu, nikoli překreslena. U každé značky je uvedena strana zdroje. ' +
+            'Anglický název je původní znění normy, ostatní jazyky jsou překlad.',
     },
     en: {
       title: 'IEC 60617 symbols',
@@ -21,16 +21,41 @@
       all: 'All',
       empty: 'Nothing found. Try another word or category.',
       count: n => `${n} symbol${n === 1 ? '' : 's'}`,
-      note: 'Every symbol is taken from the IEC 60617 symbol tables — the artwork is vectorised from the source ' +
-            'document, not redrawn. Each card cites the source page. English wording is the standard\'s own; ' +
-            'the Czech name is a translation.',
-      svg: 'SVG', png: 'PNG',
+      note: 'Every symbol is taken from the IEC 60617 symbol tables — the artwork is vectorised from ' +
+            'the source document, not redrawn. Each card cites the source page. English wording is ' +
+            "the standard's own; the other languages are translations.",
+    },
+    ru: {
+      title: 'Обозначения IEC 60617',
+      search: 'Поиск обозначения, напр. розетка, выключатель, контактор…',
+      all: 'Все',
+      empty: 'Ничего не найдено. Попробуйте другое слово или категорию.',
+      count: n => {
+        const t = n % 100 > 4 && n % 100 < 21 ? 5 : n % 10;
+        return `${n} ${t === 1 ? 'обозначение' : t > 1 && t < 5 ? 'обозначения' : 'обозначений'}`;
+      },
+      note: 'Все обозначения взяты из таблиц IEC 60617 — графика векторизована непосредственно из ' +
+            'исходного документа, а не перерисована. На каждой карточке указана страница источника. ' +
+            'Английское название — формулировка стандарта, остальные языки — перевод.',
+    },
+    pl: {
+      title: 'Symbole IEC 60617',
+      search: 'Szukaj symbolu, np. gniazdo, wyłącznik, stycznik…',
+      all: 'Wszystko',
+      empty: 'Nic nie znaleziono. Spróbuj innego słowa lub kategorii.',
+      count: n => {
+        const t = n % 100 > 11 && n % 100 < 15 ? 5 : n % 10;
+        return `${n} ${n === 1 ? 'symbol' : t > 1 && t < 5 ? 'symbole' : 'symboli'}`;
+      },
+      note: 'Wszystkie symbole pochodzą z tablic IEC 60617 — grafika jest wektoryzowana bezpośrednio ' +
+            'z dokumentu źródłowego, a nie przerysowana. Każda karta podaje stronę źródła. Nazwa ' +
+            'angielska to brzmienie normy, pozostałe języki są tłumaczeniem.',
     },
   };
 
-  let lang = localStorage.getItem('sym.lang') ||
-    ((navigator.language || '').toLowerCase().startsWith('cs') ? 'cs' : 'en');
-  if (!UI[lang]) lang = 'cs';
+  const browser = (navigator.language || '').toLowerCase().slice(0, 2);
+  let lang = localStorage.getItem('sym.lang') || (LANGS.includes(browser) ? browser : 'en');
+  if (!UI[lang]) lang = 'en';
   let cat = 'all';
   let query = '';
   let data = { categories: [], symbols: [] };
@@ -40,11 +65,23 @@
   const q = $('#q'), clear = $('#clear');
 
   /* ---------------------------------------------------------------- search */
-  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Most people here type on a Latin keyboard, so the Russian names go into
+  // the index transliterated as well: "rozetka" then finds "розетка".
+  const CYR = {
+    а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z',
+    и: 'i', й: 'j', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
+    с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh',
+    щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'ju', я: 'ja',
+  };
+  const translit = s => s.replace(/[\u0400-\u04ff]/g, c => CYR[c] || '');
 
   function haystack(s) {
     if (!s._h) {
-      s._h = norm([s.name.en, s.name.cs, s.kw.en, s.kw.cs, s.note || '', s.ref, s.id].join(' '));
+      const all = [...LANGS.map(l => s.name[l] || ''), s.kw.en || '', s.note || '', s.ref, s.id];
+      const text = norm(all.join(' '));
+      s._h = `${text} ${translit(text)}`;
     }
     return s._h;
   }
@@ -69,20 +106,19 @@
 
   function render() {
     const t = UI[lang];
-    const other = lang === 'cs' ? 'en' : 'cs';
     const list = data.symbols.filter(matches);
     const html = list.map(s => `
       <figure class="card" data-id="${s.id}">
         <svg viewBox="${VIEWBOX}" role="img" aria-label="${esc(s.name[lang])}">${s.svg}</svg>
         <figcaption>
           <div class="n">${esc(s.name[lang])}</div>
-          <div class="alt">${esc(s.name[other])}</div>
+          ${lang === 'en' ? '' : `<div class="alt">${esc(s.name.en)}</div>`}
           ${s.note ? `<div class="note">${esc(s.note)}</div>` : ''}
           ${s.ref ? `<div class="ref">${esc(s.ref)}</div>` : ''}
         </figcaption>
         <div class="dl">
-          <button type="button" data-dl="svg">${t.svg}</button>
-          <button type="button" data-dl="png">${t.png}</button>
+          <button type="button" data-dl="svg">SVG</button>
+          <button type="button" data-dl="png">PNG</button>
         </div>
       </figure>`).join('');
     grid.innerHTML = html;

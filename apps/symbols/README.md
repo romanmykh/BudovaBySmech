@@ -1,7 +1,11 @@
 # Značky IEC 60617 / IEC 60617 symbols
 
 A single-page, dependency-free directory of the IEC 60617 symbol tables: search,
-EN/CZ switching, and one-click SVG or PNG download of every symbol.
+four languages (EN, CZ, RU, PL), and one-click SVG or PNG download of every
+symbol.
+
+Published with the editor on GitHub Pages:
+**https://romanmykh.github.io/BudovaBySmech/symbols/**
 
 ```
 apps/symbols/
@@ -11,8 +15,8 @@ apps/symbols/
   data/symbols.json   generated — 526 symbols, do not edit by hand
 tools/symbols/
   extract.py          lifts artwork and wording out of the source PDF
-  build.py            adds categories and Czech names, writes symbols.json
-  cs.json             the Czech name of every row, keyed by row order
+  build.py            adds categories and translated names, writes symbols.json
+  cs.json ru.json pl.json   the name of every row per language, keyed by row order
 ```
 
 ## Where the symbols come from
@@ -33,10 +37,14 @@ the document in a few seconds.
 
 The English wording is the source's own, with its spelling mistakes corrected
 (`Brancing` → `Branching`, `genral` → `general`, and about twenty more — see
-`TYPOS` in `build.py`) so that search finds those rows. The Czech name is a
-translation, written by hand in `cs.json`; the standard itself is published in
-Czech as ČSN EN 60617 by ČAS, and where a wording matters legally, that edition
-is the one to quote.
+`TYPOS` in `build.py`) so that search finds those rows. The Czech, Russian and
+Polish names are translations, written by hand in `cs.json`, `ru.json` and
+`pl.json`; the standard itself is published nationally (ČSN EN 60617, ГОСТ,
+PN-EN 60617), and where a wording matters legally, the national edition is the
+one to quote.
+
+Search covers all four languages at once, ignores diacritics, and transliterates
+the Russian names, so `rozetka` on a Latin keyboard finds *розетка*.
 
 ## Running it
 
@@ -56,10 +64,9 @@ No build step — three static files plus one JSON. Deploy by copying
 python3 tools/symbols/build.py <source.pdf>
 ```
 
-`cs.json` is keyed by row order, so the build refuses to run if the source
-yields a different number of rows than the translation table covers — a changed
-source means the Czech names need revisiting rather than silently shifting by
-one.
+The translation tables are keyed by row order, so the build refuses to run if
+the source yields a different number of rows than they cover — a changed source
+means the names need revisiting rather than silently shifting by one.
 
 ## Data format
 
@@ -73,8 +80,10 @@ one.
       "id": "socket-outlet-power-with-protective-contact",
       "cat": "sockets",
       "name": { "en": "Socket outlet (power) with protective contact",
-                "cs": "Zásuvka s ochranným kontaktem" },
-      "kw":   { "en": "zásuvka socket plug receptacle", "cs": "" },
+                "cs": "Zásuvka s ochranným kontaktem",
+                "ru": "Розетка с защитным контактом",
+                "pl": "Gniazdo wtyczkowe ze stykiem ochronnym" },
+      "kw":   { "en": "zásuvka socket plug receptacle" },
       "note": "",
       "ref": "IEC 60617 · s. 21",
       "svg": "<path d=\"…\" fill=\"currentColor\" stroke=\"none\" fill-rule=\"evenodd\"/>"
@@ -87,5 +96,14 @@ one.
 page themes them and the download carries a black symbol on a transparent (SVG)
 or white (PNG, 960 × 640) background. `note` is the source's own comment column.
 
-Search matches both languages, the keyword list, the source comment, the page
-reference and the id, and ignores diacritics: `zasuvka` finds *zásuvka*.
+Search matches every language, the keyword list, the source comment, the page
+reference and the id.
+
+## Deployment
+
+`.github/workflows/pages.yml` copies `apps/symbols/` into the Pages artifact at
+`/symbols/`, so it is published alongside the editor on every push to the
+default branch. The page uses relative paths only, so it works from any
+subpath. The `deploy` job is skipped on other branches, because the
+`github-pages` environment only accepts deployments from the default branch and
+would otherwise fail the run.

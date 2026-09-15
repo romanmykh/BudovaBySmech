@@ -2,9 +2,9 @@
 """Build apps/symbols/data/symbols.json from the IEC 60617 source PDF.
 
 Nothing here draws a symbol.  extract.py lifts the artwork and the wording out
-of the source document; this adds the Czech names (tools/symbols/cs.json), the
-category each row belongs to, and the small spelling fixes the source needs, and
-writes what the page loads.
+of the source document; this adds the translated names (cs.json, ru.json,
+pl.json), the category each row belongs to, and the small spelling fixes the
+source needs, and writes what the page loads.
 
     python3 tools/symbols/build.py <source.pdf>
 """
@@ -18,27 +18,45 @@ from extract import extract
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "..", "apps", "symbols", "data", "symbols.json")
 
+LANGS = ("en", "cs", "ru", "pl")
+
+# id, then the category name in each language of LANGS
 CATEGORIES = [
-    ("connections", "Conductors & connections", "Vodiče a spoje"),
-    ("network", "Lines & wiring", "Vedení a rozvody"),
-    ("sockets", "Socket outlets", "Zásuvky"),
-    ("switches", "Switches (installation)", "Vypínače a spínače"),
-    ("lighting", "Lighting", "Svítidla"),
-    ("appliances", "Appliances", "Spotřebiče"),
-    ("switching", "Switching & protection devices", "Spínací a jisticí přístroje"),
-    ("protection", "Surge protection", "Ochrana před přepětím"),
-    ("earthing", "Earthing & bonding", "Uzemnění a pospojování"),
-    ("measuring", "Measuring & signalling", "Měřicí přístroje a signalizace"),
-    ("machines", "Rotating machines", "Točivé stroje"),
-    ("transformers", "Transformers", "Transformátory"),
-    ("converters", "Converters & sources", "Měniče a zdroje"),
-    ("generation", "Generating stations & substations", "Výrobny a rozvodny"),
-    ("passive", "Passive components", "Pasivní součástky"),
-    ("semiconductors", "Semiconductors", "Polovodičové součástky"),
-    ("actuators", "Actuators & operation", "Ovládací prvky a pohony"),
-    ("qualifiers", "Qualifying symbols", "Kvalifikační značky"),
-    ("selectors", "Selectors", "Voliče"),
-    ("misc", "Other symbols", "Ostatní značky"),
+    ("connections", "Conductors & connections", "Vodiče a spoje",
+     "Проводники и соединения", "Przewody i połączenia"),
+    ("network", "Lines & wiring", "Vedení a rozvody",
+     "Линии и прокладка", "Linie i instalacje"),
+    ("sockets", "Socket outlets", "Zásuvky", "Розетки", "Gniazda wtyczkowe"),
+    ("switches", "Switches (installation)", "Vypínače a spínače",
+     "Выключатели (установочные)", "Łączniki instalacyjne"),
+    ("lighting", "Lighting", "Svítidla", "Освещение", "Oświetlenie"),
+    ("appliances", "Appliances", "Spotřebiče", "Приёмники энергии", "Odbiorniki"),
+    ("switching", "Switching & protection devices", "Spínací a jisticí přístroje",
+     "Коммутационные и защитные аппараты", "Aparaty łączeniowe i zabezpieczające"),
+    ("protection", "Surge protection", "Ochrana před přepětím",
+     "Защита от перенапряжений", "Ochrona przepięciowa"),
+    ("earthing", "Earthing & bonding", "Uzemnění a pospojování",
+     "Заземление и уравнивание потенциалов", "Uziemienia i połączenia wyrównawcze"),
+    ("measuring", "Measuring & signalling", "Měřicí přístroje a signalizace",
+     "Измерительные приборы и сигнализация", "Przyrządy pomiarowe i sygnalizacja"),
+    ("machines", "Rotating machines", "Točivé stroje",
+     "Электрические машины", "Maszyny elektryczne"),
+    ("transformers", "Transformers", "Transformátory",
+     "Трансформаторы", "Transformatory"),
+    ("converters", "Converters & sources", "Měniče a zdroje",
+     "Преобразователи и источники", "Przekształtniki i źródła"),
+    ("generation", "Generating stations & substations", "Výrobny a rozvodny",
+     "Электростанции и подстанции", "Elektrownie i stacje"),
+    ("passive", "Passive components", "Pasivní součástky",
+     "Пассивные компоненты", "Elementy bierne"),
+    ("semiconductors", "Semiconductors", "Polovodičové součástky",
+     "Полупроводниковые приборы", "Elementy półprzewodnikowe"),
+    ("actuators", "Actuators & operation", "Ovládací prvky a pohony",
+     "Приводы и органы управления", "Napędy i elementy sterownicze"),
+    ("qualifiers", "Qualifying symbols", "Kvalifikační značky",
+     "Квалифицирующие обозначения", "Symbole kwalifikujące"),
+    ("selectors", "Selectors", "Voliče", "Искатели", "Wybieraki"),
+    ("misc", "Other symbols", "Ostatní značky", "Прочие обозначения", "Inne symbole"),
 ]
 
 # The source runs in topic order, so a row's category follows from its position.
@@ -143,12 +161,18 @@ def keywords(en):
 
 def main(pdf):
     rows = extract(pdf)
-    cs = json.load(open(os.path.join(HERE, "cs.json"), encoding="utf-8"))
-    if len(cs) != len(rows):
-        raise SystemExit(
-            f"cs.json has {len(cs)} names but the source yields {len(rows)} rows; "
-            "the translation table is keyed by row order and must be updated"
-        )
+    names = {}
+    for lang in LANGS:
+        if lang == "en":
+            continue  # the English name is the source's own wording
+        table = json.load(open(os.path.join(HERE, f"{lang}.json"), encoding="utf-8"))
+        if len(table) != len(rows):
+            raise SystemExit(
+                f"{lang}.json has {len(table)} names but the source yields "
+                f"{len(rows)} rows; the translation tables are keyed by row order "
+                "and must be updated together with the source"
+            )
+        names[lang] = table
 
     seen = {}
     symbols = []
@@ -161,8 +185,8 @@ def main(pdf):
             {
                 "id": sid,
                 "cat": category(i),
-                "name": {"en": en, "cs": cs[str(i)]},
-                "kw": {"en": keywords(en), "cs": ""},
+                "name": dict({"en": en}, **{l: names[l][str(i)] for l in names}),
+                "kw": {"en": keywords(en)},
                 "note": fix(row["comment"]),
                 "ref": f"IEC 60617 · s. {row['page']}",
                 "svg": row["svg"],
@@ -176,8 +200,11 @@ def main(pdf):
             "source": "IEC 60617 symbol tables (source PDF), 53 pages",
             "viewBox": "0 0 120 80",
             "count": len(symbols),
+            "langs": list(LANGS),
         },
-        "categories": [{"id": c, "en": e, "cs": s} for c, e, s in CATEGORIES],
+        "categories": [
+            dict({"id": c[0]}, **dict(zip(LANGS, c[1:]))) for c in CATEGORIES
+        ],
         "symbols": symbols,
     }
     with open(os.path.abspath(OUT), "w", encoding="utf-8") as f:
@@ -187,8 +214,8 @@ def main(pdf):
     for s in symbols:
         counts[s["cat"]] = counts.get(s["cat"], 0) + 1
     print(f"{len(symbols)} symbols -> {os.path.abspath(OUT)}")
-    for c, e, _ in CATEGORIES:
-        print(f"  {c:16} {counts.get(c, 0)}")
+    for c in CATEGORIES:
+        print(f"  {c[0]:16} {counts.get(c[0], 0)}")
 
 
 if __name__ == "__main__":

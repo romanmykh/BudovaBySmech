@@ -5,23 +5,25 @@
   const VIEWBOX = '0 0 120 80';
   const UI = {
     cs: {
-      title: 'Značky elektro',
-      search: 'Hledat značku, např. zásuvka, chránič, RCD…',
+      title: 'Značky IEC 60617',
+      search: 'Hledat značku, např. zásuvka, jistič, stykač…',
       all: 'Vše',
       empty: 'Nic nenalezeno. Zkuste jiné slovo nebo jinou kategorii.',
       count: n => `${n} ${n === 1 ? 'značka' : n < 5 ? 'značky' : 'značek'}`,
-      note: 'Grafické tvary podle ČSN EN 60617 / IEC 60617 a ČSN EN 60617-11 (výkresy elektrických instalací). ' +
-            'Pro projektovou dokumentaci vždy ověřte platné znění normy u ČAS (agentura-cas.cz).',
+      note: 'Všechny značky jsou převzaty z tabulek IEC 60617 — grafika je vektorizována přímo ze zdrojového ' +
+            'dokumentu, nikoli překreslena. U každé značky je uvedena strana zdroje. Anglický název je původní ' +
+            'znění normy, český je překlad.',
       svg: 'SVG', png: 'PNG',
     },
     en: {
-      title: 'Electrical symbols',
-      search: 'Search a symbol, e.g. socket, RCD, breaker…',
+      title: 'IEC 60617 symbols',
+      search: 'Search a symbol, e.g. socket, breaker, contactor…',
       all: 'All',
       empty: 'Nothing found. Try another word or category.',
       count: n => `${n} symbol${n === 1 ? '' : 's'}`,
-      note: 'Graphical forms follow ČSN EN 60617 / IEC 60617 and ČSN EN 60617-11 (installation drawings). ' +
-            'For project documentation always verify against the current standard text (agentura-cas.cz).',
+      note: 'Every symbol is taken from the IEC 60617 symbol tables — the artwork is vectorised from the source ' +
+            'document, not redrawn. Each card cites the source page. English wording is the standard\'s own; ' +
+            'the Czech name is a translation.',
       svg: 'SVG', png: 'PNG',
     },
   };
@@ -42,7 +44,7 @@
 
   function haystack(s) {
     if (!s._h) {
-      s._h = norm([s.name.en, s.name.cs, s.kw.en, s.kw.cs, s.ref, s.id].join(' '));
+      s._h = norm([s.name.en, s.name.cs, s.kw.en, s.kw.cs, s.note || '', s.ref, s.id].join(' '));
     }
     return s._h;
   }
@@ -56,9 +58,11 @@
 
   /* ---------------------------------------------------------------- render */
   function svgMarkup(s) {
+    // the symbol paths are filled shapes drawn in currentColor, so the file
+    // carries a colour for them to resolve against
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" width="240" height="160" ` +
-      `fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ` +
-      `role="img" aria-label="${esc(s.name[lang])}">${s.svg}</svg>`;
+      `color="#000" role="img" aria-label="${esc(s.name[lang])}">` +
+      `<title>${esc(s.name.en)} — ${esc(s.name.cs)}</title>${s.svg}</svg>`;
   }
 
   const esc = s => s.replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
@@ -73,6 +77,7 @@
         <figcaption>
           <div class="n">${esc(s.name[lang])}</div>
           <div class="alt">${esc(s.name[other])}</div>
+          ${s.note ? `<div class="note">${esc(s.note)}</div>` : ''}
           ${s.ref ? `<div class="ref">${esc(s.ref)}</div>` : ''}
         </figcaption>
         <div class="dl">
@@ -96,7 +101,7 @@
   function applyLang() {
     const t = UI[lang];
     document.documentElement.lang = lang;
-    document.title = t.title + ' – ČSN EN 60617';
+    document.title = t.title;
     $('h1').textContent = t.title;
     q.placeholder = t.search;
     $('footer p').textContent = t.note;

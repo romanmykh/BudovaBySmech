@@ -42,13 +42,14 @@ Environment variables for the server: `PORT` (8787), `DB_FILE`
 ## Symbol directory
 
 A second, deliberately tiny page lives next to the editor: a searchable
-directory of 279 electrical symbols drawn to ČSN EN 60617 / ČSN EN 60617-11,
-bilingual EN/CZ, each downloadable as SVG or PNG. Three static files, no
-framework, no build.
+directory of 526 symbols taken from the IEC 60617 symbol tables, bilingual
+EN/CZ, each downloadable as SVG or PNG. The artwork is vectorised out of the
+source document rather than redrawn, and every card cites its source page.
+Three static files, no framework, no build.
 
 ```bash
-npm run symbols          # http://localhost:8080
-npm run symbols:build    # regenerate the symbol data
+npm run symbols                       # http://localhost:8080
+python3 tools/symbols/build.py <pdf>  # regenerate the symbol data
 ```
 
 See [apps/symbols/README.md](apps/symbols/README.md).
@@ -91,9 +92,9 @@ BASE_PATH=/BudovaBySmech/ VITE_API_BASE=off npx vite build
 packages/engine   simulation engine — pure TypeScript, no React, unit tested
 apps/web          React + Vite editor
 apps/server       Express + SQLite + bcrypt + JWT
-apps/symbols      static EN/CZ directory of ČSN EN 60617 symbols (no build step)
+apps/symbols      static EN/CZ directory of IEC 60617 symbols (no build step)
 tools/locales     the single table the five locale files are generated from
-tools/symbols     generator for apps/symbols/data/symbols.json
+tools/symbols     extracts the symbols from the IEC 60617 source PDF
 docs/             project JSON schema
 ```
 

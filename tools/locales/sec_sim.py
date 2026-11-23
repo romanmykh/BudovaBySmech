@@ -240,4 +240,9 @@ add({
 "status.tripped": ["{{count}} device(s) tripped", "Vypnuto přístrojů: {{count}}", "Спрацювало апаратів: {{count}}", "Zadziałało aparatów: {{count}}", "Сработало аппаратов: {{count}}"],
 "status.touchVoltage": ["Highest touch voltage", "Nejvyšší dotykové napětí", "Найвища напруга дотику", "Najwyższe napięcie dotykowe", "Наибольшее напряжение прикосновения"],
 "status.bodyCurrent": ["Body current", "Proud tělem", "Струм крізь тіло", "Prąd przez ciało", "Ток через тело"],
+"log.relayOn": ["{{label}} energised.", "{{label}} přitáhlo.", "{{label}} спрацювало.", "{{label}} zadziałał.", "{{label}} сработало."],
+"log.relayOff": ["{{label}} released.", "{{label}} odpadlo.", "{{label}} відпустило.", "{{label}} odpadł.", "{{label}} отпустило."],
+"log.coilOvervoltage": ["{{label}}: {{u}} V on a {{un}} V coil — the coil will burn out.", "{{label}}: {{u}} V na cívce {{un}} V — cívka se spálí.", "{{label}}: {{u}} В на котушці {{un}} В — котушка згорить.", "{{label}}: {{u}} V na cewce {{un}} V — cewka się spali.", "{{label}}: {{u}} В на катушке {{un}} В — катушка сгорит."],
+"log.contactorOverload": ["{{label}} carries {{i}} A, above its AC-3 rating of {{inA}} A.", "{{label}} vede {{i}} A, víc než jmenovitých {{inA}} A v AC-3.", "{{label}} проводить {{i}} А, більше за номінальні {{inA}} А в AC-3.", "{{label}} przewodzi {{i}} A, więcej niż znamionowe {{inA}} A w AC-3.", "{{label}} проводит {{i}} А, больше номинальных {{inA}} А в AC-3."],
+"log.overloadReset": ["{{label}} reset.", "{{label}} odblokováno (reset).", "{{label}} скинуто (reset).", "{{label}} odblokowany (reset).", "{{label}} сброшено (reset)."],
 })

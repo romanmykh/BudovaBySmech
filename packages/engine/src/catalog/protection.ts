@@ -1,4 +1,5 @@
 import type { ComponentDef, UpdateCtx, StampCtx } from './types.js';
+import { parseContacts, contactsWidth, contactColumns, contactTerminals, stampContacts } from './contacts.js';
 import {
   Poles, poleConductors, protectedConductors, seriesTerminals, numOptions, strOptions,
   R_OPEN, R_CLOSED, isThreePhase,
@@ -579,18 +580,26 @@ export const protectionDefs: ComponentDef[] = [
     category: 'protection',
     symbol: 'motorStarter',
     modules: 3,
-    size: () => ({ w: 80, h: 60 }),
     interactive: 'toggle',
     flags: { protective: true, overcurrent: true, threePhase: () => true },
     keywords: ['motorový spouštěč', 'motor starter', 'rozrusznik'],
-    defaultProps: { setA: 6, rangeLo: 4, rangeHi: 6.3, class: 10 },
+    defaultProps: { setA: 6, rangeLo: 4, rangeHi: 6.3, class: 10, aux: 'none' },
     props: [
       { key: 'setA', type: 'number', unit: 'A', min: 0.1, max: 63, step: 0.1 },
+      { key: 'aux', type: 'select', options: strOptions(['none', '1NO', '1NC', '1NO+1NC']) },
       { key: 'class', type: 'select', options: numOptions([10, 20, 30]), advanced: true },
     ],
-    terminals: () => seriesTerminals('3P', 80, 60),
+    size: (p) => ({ w: 80 + contactsWidth(parseContacts(p.aux)), h: 60 }),
+    terminals: (p) => [
+      ...seriesTerminals('3P', 80, 60),
+      ...contactTerminals(contactColumns(parseContacts(p.aux), 80), 60),
+    ],
     initState: () => ({ closed: true, tripped: false, damage: 0 }),
-    stamp: (ctx) => stampSeries(ctx, '3P', ctx.state.closed && !ctx.state.tripped),
+    stamp: (ctx) => {
+      const on = ctx.state.closed && !ctx.state.tripped;
+      stampSeries(ctx, '3P', on);
+      stampContacts(ctx, contactColumns(parseContacts(ctx.props.aux), 80), on);
+    },
     update: (ctx) => {
       const st = ctx.state;
       let maxI = 0;
@@ -642,7 +651,8 @@ export const protectionDefs: ComponentDef[] = [
     modules: 3,
     size: () => ({ w: 80, h: 60 }),
     flags: { protective: true },
-    keywords: ['tepelné relé', 'thermal overload', 'przekaźnik termiczny'],
+    interactive: 'button',
+    keywords: ['tepelné relé', 'nadproudové relé', 'thermal overload', 'przekaźnik termiczny', 'теплове реле', 'тепловое реле', '95-96'],
     defaultProps: { setA: 6, class: 10 },
     props: [
       { key: 'setA', type: 'number', unit: 'A', min: 0.1, max: 100, step: 0.1 },
@@ -650,20 +660,34 @@ export const protectionDefs: ComponentDef[] = [
     ],
     terminals: () => [
       ...seriesTerminals('3P', 80, 60),
-      { id: 'nc.1', role: 'ctrl' as const, mark: '95', x: 5, y: 30, side: 'left' as const },
-      { id: 'nc.2', role: 'ctrl' as const, mark: '96', x: 75, y: 30, side: 'right' as const },
+      { id: 'nc.1', role: 'ctrl' as const, mark: '95', x: 0, y: 20, side: 'left' as const },
+      { id: 'nc.2', role: 'ctrl' as const, mark: '96', x: 0, y: 40, side: 'left' as const },
+      { id: 'no.1', role: 'ctrl' as const, mark: '97', x: 80, y: 20, side: 'right' as const },
+      { id: 'no.2', role: 'ctrl' as const, mark: '98', x: 80, y: 40, side: 'right' as const },
     ],
-    initState: () => ({ tripped: false, damage: 0 }),
+    // Press the device in live mode to reset it once it has cooled down.
+    initState: () => ({ tripped: false, damage: 0, pressed: false }),
     stamp: (ctx) => {
       stampSeries(ctx, '3P', true);
       ctx.R(ctx.node('nc.1'), ctx.node('nc.2'), ctx.state.tripped ? R_OPEN : R_CLOSED, 'nc');
+      ctx.R(ctx.node('no.1'), ctx.node('no.2'), ctx.state.tripped ? R_CLOSED : R_OPEN, 'no');
     },
     update: (ctx) => {
       const st = ctx.state;
+      if (st.pressed && st.tripped && st.damage < 0.9) {
+        st.tripped = false;
+        st.damage = Math.min(st.damage, 0.7);
+        ctx.invalidate();
+        ctx.log({ key: 'log.overloadReset', vars: { label: ctx.comp.label || 'F' }, level: 'info', comp: ctx.comp.id });
+      }
+      ctx.meas('thermalLoad', Math.min(1, st.damage));
       let maxI = 0;
       for (const c of ['L1', 'L2', 'L3']) maxI = Math.max(maxI, ctx.i(`p.${c}`));
       ctx.meas('I', maxI);
-      if (st.tripped) return;
+      if (st.tripped) {
+        st.damage = Math.max(0, st.damage - ctx.env.dt / 60);
+        return;
+      }
       const setA = Number(ctx.props.setA) || 6;
       const cls = Number(ctx.props.class) || 10;
       const x = maxI / setA;

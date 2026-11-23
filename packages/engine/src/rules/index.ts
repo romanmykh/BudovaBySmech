@@ -607,7 +607,7 @@ const rulePeNotSwitched: Rule = (a, push) => {
       if (!c) continue;
       const def = getDef(c.type);
       if (!def) continue;
-      const switching = def.flags?.overcurrent || def.flags?.rcd || c.type === 'isolator' || c.type === 'contactor' || c.type === 'fuse' || c.type.startsWith('switch');
+      const switching = def.flags?.overcurrent || def.flags?.rcd || c.type === 'isolator' || c.type === 'contactor' || c.type === 'motorContactor' || c.type === 'fuse' || c.type.startsWith('switch');
       if (switching && (end.terminal.startsWith('in.') || end.terminal.startsWith('out.') || end.terminal.startsWith('c'))) {
         bad.push({ comp: c, wire: w });
       }

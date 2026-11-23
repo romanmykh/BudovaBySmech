@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { contactColumns, parseContacts, PILOT_X0, type ContactColumn } from '@budova/engine';
 
 export interface SymbolCtx {
   w: number;
@@ -11,6 +12,10 @@ export interface SymbolCtx {
 }
 
 const S = 1.4; // default stroke width
+
+const BUTTON_COLORS: Record<string, string> = {
+  green: '#2e9e4f', red: '#c0322b', black: '#222', white: '#ddd', yellow: '#e0b030', blue: '#2f6fd0',
+};
 
 const line = (x1: number, y1: number, x2: number, y2: number, extra: any = {}) => (
   <line x1={x1} y1={y1} x2={x2} y2={y2} strokeWidth={S} {...extra} />
@@ -61,6 +66,98 @@ function poleCount(poles: string): number {
     default:
       return 4;
   }
+}
+
+
+/**
+ * A row of numbered contacts (EN 50005) drawn in their actual state. The
+ * actuating linkage is drawn as a dashed line from `linkFrom` across the row.
+ */
+function contactRow(cols: ContactColumn[], h: number, actuated: boolean, live: boolean, linkFrom?: number): JSX.Element {
+  const y1 = h / 2 - 9;
+  const y2 = h / 2 + 9;
+  const hot = live && actuated ? 'var(--ok)' : 'currentColor';
+  const dot = (x: number, y: number) => <circle cx={x} cy={y} r={1.4} fill="currentColor" stroke="none" />;
+  return (
+    <g>
+      {linkFrom !== undefined && cols.length > 0 &&
+        line(linkFrom, h / 2, cols[cols.length - 1]!.x, h / 2, { strokeDasharray: '2 2', strokeWidth: 0.8, opacity: 0.7 })}
+      {cols.map((c, i) => {
+        const x = c.x;
+        if (c.kind === 'CO') {
+          return (
+            <g key={i}>
+              {line(x, 0, x, y1)}
+              {line(x - 7, h, x - 7, y2)}
+              {line(x + 7, h, x + 7, y2)}
+              {dot(x, y1)}
+              {line(x, y1, actuated ? x + 7 : x - 7, y2 - 1, { stroke: hot })}
+              {text(x + 1, 13, c.marks.c ?? '', 6.5)}
+              {text(x - 9, h - 8, c.marks.nc ?? '', 6.5)}
+              {text(x + 9, h - 8, c.marks.no ?? '', 6.5)}
+            </g>
+          );
+        }
+        const closed = c.kind === 'NO' ? actuated : !actuated;
+        return (
+          <g key={i}>
+            {line(x, 0, x, y1)}
+            {line(x, h, x, y2)}
+            {dot(x, y2)}
+            {c.kind === 'NC' && line(x, y1, x + 5, y1)}
+            {closed
+              ? line(x, y2, c.kind === 'NC' ? x + 4 : x, y1 + (c.kind === 'NC' ? 1 : 0), { stroke: live ? 'var(--ok)' : 'currentColor' })
+              : line(x, y2, c.kind === 'NC' ? x - 6 : x - 7, y1 + 2)}
+            {text(x + 6, 12, c.marks.a ?? '', 6.5, { textAnchor: 'start' })}
+            {text(x + 6, h - 6, c.marks.b ?? '', 6.5, { textAnchor: 'start' })}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** Relay or contactor coil between A1 (top) and A2 (bottom). */
+function coil(x: number, h: number, energised: boolean, live: boolean, label = ''): JSX.Element {
+  return (
+    <g>
+      {line(x, 0, x, h / 2 - 9)}
+      {line(x, h / 2 + 9, x, h)}
+      {rect(x - 6, h / 2 - 9, 12, 18, { fill: live && energised ? 'var(--ok)' : 'none', fillOpacity: 0.35 })}
+      {label ? text(x, h / 2 + 3, label, 7) : null}
+      {text(x - 9, 11, 'A1', 6, { textAnchor: 'end' })}
+      {text(x - 9, h - 5, 'A2', 6, { textAnchor: 'end' })}
+    </g>
+  );
+}
+
+/** Main power contacts of a contactor, NO unless listed in `ncFrom`. */
+function mainContacts(xs: number[], h: number, closed: boolean, live: boolean, ncFrom = Infinity): JSX.Element {
+  return (
+    <g>
+      {xs.map((x, i) => {
+        const isNc = i >= ncFrom;
+        const on = isNc ? !closed : closed;
+        return (
+          <g key={i}>
+            {line(x, 0, x, h / 2 - 9)}
+            {line(x, h, x, h / 2 + 9)}
+            <circle cx={x} cy={h / 2 + 9} r={1.4} fill="currentColor" stroke="none" />
+            {isNc && line(x, h / 2 - 9, x + 5, h / 2 - 9)}
+            {on
+              ? line(x, h / 2 + 9, isNc ? x + 4 : x, h / 2 - 8, { stroke: live ? 'var(--ok)' : 'currentColor', strokeWidth: 2 })
+              : line(x, h / 2 + 9, x - 8, h / 2 - 7, { strokeWidth: 2 })}
+            {/* arc-quenching semicircle on a power contact */}
+            {!isNc && <path d={`M${x - 3} ${h / 2 - 9} a3 3 0 0 0 6 0`} fill="none" strokeWidth={0.9} />}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+function pilotBody(w: number, h: number, extra: any = {}) {
+  return rect(2, 4, w - 4, h - 8, { rx: 4, strokeDasharray: '3 2', strokeWidth: 0.8, ...extra });
 }
 
 /* ------------------------------------------------------------------ */
@@ -170,27 +267,36 @@ const SYMBOLS: Record<string, SymbolFn> = {
     </g>
   ),
 
-  motorStarter: ({ w, h, props, state }) => (
-    <g>
-      {body(w, h)}
-      {poleColumns(w, 3).map((x, i) => (
-        <g key={i}>{contact(x, 6, h - 6, !!state?.closed && !state?.tripped)}</g>
-      ))}
-      {text(w / 2, h - 12, `${props.setA ?? 6} A`, 8)}
-    </g>
-  ),
+  motorStarter: ({ w, h, props, state, live }) => {
+    const on = !!state?.closed && !state?.tripped;
+    return (
+      <g>
+        {body(80, h)}
+        {poleColumns(80, 3).map((x, i) => (
+          <g key={i}>{contact(x, 6, h - 6, on)}</g>
+        ))}
+        {text(40, h - 12, `${props.setA ?? 6} A`, 8)}
+        {contactRow(contactColumns(parseContacts(props.aux), 80), h, on, live, 66)}
+        {state?.tripped ? text(70, 18, '!', 12, { fill: 'var(--fail)' }) : null}
+      </g>
+    );
+  },
 
-  overloadRelay: ({ w, h, props, state }) => (
+  overloadRelay: ({ w, h, props, state, live }) => (
     <g>
       {body(w, h)}
       {poleColumns(w, 3).map((x, i) => (
         <g key={i}>
           {line(x, 6, x, h - 6)}
-          {rect(x - 4, h / 2 - 8, 8, 16)}
+          <path d={`M${x} ${h / 2 - 8} h-4 v8 h4`} fill="none" strokeWidth={S} />
         </g>
       ))}
-      {text(w / 2, h - 12, `${props.setA ?? 6} A`, 8)}
-      {state?.tripped ? text(w - 12, 18, '!', 12, { fill: 'var(--fail)' }) : null}
+      {text(8, 18, '95', 6)}
+      {text(8, 46, '96', 6)}
+      {text(w - 8, 18, '97', 6)}
+      {text(w - 8, 46, '98', 6)}
+      {text(w / 2, h - 10, `${props.setA ?? 6} A`, 8)}
+      {state?.tripped ? text(w / 2, 16, live ? 'RESET' : '!', live ? 7 : 12, { fill: 'var(--fail)' }) : null}
     </g>
   ),
 
@@ -237,16 +343,23 @@ const SYMBOLS: Record<string, SymbolFn> = {
     </g>
   ),
 
-  contactor: ({ w, h, props, state }) => (
-    <g>
-      {body(w, h)}
-      {poleColumns(w - 20, poleCount(String(props.poles ?? '4P'))).map((x, i) => (
-        <g key={i}>{contact(x, 6, h - 6, !!state?.closed)}</g>
-      ))}
-      {rect(w - 18, h / 2 - 9, 12, 18)}
-      {text(w - 12, h / 2 + 4, 'A', 8)}
-    </g>
-  ),
+  contactor: ({ w, h, props, state, live }) => {
+    const n = poleCount(String(props.poles ?? '4P'));
+    const mw = n * 20 + 20;
+    const xs = poleColumns(mw, n);
+    const manual = props.manual === 'on' ? true : props.manual === 'off' ? false : !!state?.closed;
+    const nNc = props.nc ? n : Math.max(0, Math.min(n, Number(props.ncCount) || 0));
+    return (
+      <g>
+        {body(w, h, { strokeWidth: 0.8 })}
+        {mainContacts(xs, h, manual, live, n - nNc)}
+        {line(xs[0]!, h / 2, mw + 4, h / 2, { strokeDasharray: '2 2', strokeWidth: 0.8, opacity: 0.7 })}
+        {coil(mw + 10, h, !!state?.closed, live)}
+        {contactRow(contactColumns(parseContacts(props.aux), mw + 20), h, manual, live, mw + 16)}
+        {props.manual && props.manual !== 'auto' ? text(mw + 10, h - 14, props.manual === 'on' ? 'I' : '0', 8, { fill: 'var(--warn)' }) : null}
+      </g>
+    );
+  },
 
   impulseRelay: ({ w, h, state }) => (
     <g>
@@ -268,12 +381,15 @@ const SYMBOLS: Record<string, SymbolFn> = {
     </g>
   ),
 
-  timeRelay: ({ w, h, state }) => (
+  timeRelay: ({ w, h, props, state, live, meas }) => (
     <g>
-      {body(w, h)}
-      {rect(8, h / 2 - 9, 14, 18)}
-      {contact(w - 15, 6, h - 6, !!state?.closed)}
-      {text(15, h / 2 + 4, 't', 10)}
+      {body(w, h, { strokeWidth: 0.8 })}
+      {coil(15, h, (meas?.timer ?? 0) > 0 || !!state?.closed, live)}
+      {rect(9, h / 2 - 9, 12, 18, { fill: 'none' })}
+      {line(9, h / 2 - 9, 21, h / 2 + 9, { strokeWidth: 0.8 })}
+      {contactRow(contactColumns(['CO'], 35), h, !!state?.closed, live, 21)}
+      {text(w / 2, h - 2, String(props.mode ?? 'onDelay') === 'flasher' ? '⟲' : `${props.delay ?? ''}s`, 7)}
+      {live && (meas?.timer ?? 0) > 0 ? text(w / 2, 6, `${(meas.timer ?? 0).toFixed(1)}`, 6.5, { fill: 'var(--warn)' }) : null}
     </g>
   ),
 
@@ -684,13 +800,29 @@ const SYMBOLS: Record<string, SymbolFn> = {
     </g>
   ),
 
-  motor: ({ w, h }) => (
-    <g>
-      {circle(w / 2, h / 2, 17)}
-      {text(w / 2, h / 2 + 5, 'M', 14)}
-      {text(w / 2, h / 2 + 15, '3~', 8)}
-    </g>
-  ),
+  motor: ({ w, h, meas, live }) => {
+    const rot = Number(meas?.rotation ?? 0);
+    const running = live && (meas?.I_L1 ?? 0) > 0.2;
+    return (
+      <g>
+        {circle(w / 2, h / 2, 17, { fill: running ? 'var(--ok)' : 'none', fillOpacity: 0.12 })}
+        {text(w / 2, h / 2 + 5, 'M', 14)}
+        {text(w / 2, h / 2 + 15, '3~', 8)}
+        {running && rot !== 0 ? (
+          <g>
+            <path
+              d={rot > 0 ? `M${w / 2 - 12} ${h / 2 - 16} a20 20 0 0 1 24 0` : `M${w / 2 + 12} ${h / 2 - 16} a20 20 0 0 0 -24 0`}
+              fill="none"
+              stroke="var(--ok)"
+              strokeWidth={1.6}
+                          />
+            {text(w / 2 + 26, h / 2 - 12, rot > 0 ? '↻' : '↺', 11, { fill: 'var(--ok)' })}
+          </g>
+        ) : null}
+        {running && rot === 0 ? text(w / 2, h - 2, '~ hum', 7, { fill: 'var(--warn)' }) : null}
+      </g>
+    );
+  },
 
   machine: ({ w, h }) => (
     <g>
@@ -771,6 +903,93 @@ const SYMBOLS: Record<string, SymbolFn> = {
       {[0, 1, 2].map((i) => <g key={i}>{circle(16 + i * 14, 18, 4)}</g>)}
     </g>
   ),
+
+  motorContactor: ({ w, h, props, state, live }) => (
+    <g>
+      {body(w, h, { strokeWidth: 0.8 })}
+      {mainContacts(poleColumns(80, 3), h, !!state?.closed, live)}
+      {line(20, h / 2, 84, h / 2, { strokeDasharray: '2 2', strokeWidth: 0.8, opacity: 0.7 })}
+      {coil(90, h, !!state?.closed, live)}
+      {contactRow(contactColumns(parseContacts(props.aux), 100), h, !!state?.closed, live, 96)}
+      {text(40, h - 2, `${props.inA ?? 9} A AC-3`, 6.5)}
+    </g>
+  ),
+
+  controlRelay: ({ w, h, props, state, live }) => (
+    <g>
+      {body(w, h, { strokeWidth: 0.8 })}
+      {coil(15, h, !!state?.closed, live)}
+      {contactRow(contactColumns(parseContacts(props.contacts), 30), h, !!state?.closed, live, 21)}
+      {circle(w - 7, 10, 2.2, { fill: live && state?.closed ? 'var(--warn)' : 'none', strokeWidth: 0.8 })}
+    </g>
+  ),
+
+  pushButton: ({ w, h, props, state, live }) => {
+    const cols = contactColumns(parseContacts(props.contacts), PILOT_X0);
+    const pressed = !!state?.pressed;
+    const color = BUTTON_COLORS[String(props.color ?? 'green')] ?? '#2e9e4f';
+    const xEnd = cols.length ? cols[cols.length - 1]!.x : w / 2;
+    return (
+      <g>
+        {pilotBody(w, h)}
+        {contactRow(cols, h, pressed, live)}
+        {/* push actuator: E-] */}
+        <g transform={`translate(${pressed ? 3 : 0} 0)`}>
+          <path d={`M12 ${h / 2 - 6} h-3 v12 h3`} fill="none" strokeWidth={S} />
+          {rect(3, h / 2 - 5, 5, 10, { fill: color, stroke: 'none', rx: 1.5 })}
+        </g>
+        {line(12, h / 2, xEnd - 4, h / 2, { strokeDasharray: '2 2', strokeWidth: 0.8, opacity: 0.7 })}
+      </g>
+    );
+  },
+
+  selectorSwitch: ({ w, h, props, state, live }) => {
+    const three = props.positions === '1-0-2';
+    const cols = contactColumns(three ? ['NO', 'NO'] : parseContacts(props.contacts), PILOT_X0);
+    const pos = Number(state?.pos3) || 0;
+    return (
+      <g>
+        {pilotBody(w, h)}
+        {three ? (
+          <g>
+            {contactRow([cols[0]!], h, pos === 1, live, 13)}
+            {contactRow([cols[1]!], h, pos === 2, live)}
+          </g>
+        ) : (
+          contactRow(cols, h, pos !== 0, live, 13)
+        )}
+        {/* rotary actuator with the position shown */}
+        {circle(9, h / 2, 6)}
+        {text(9, h / 2 + 3, three ? (pos === 1 ? '1' : pos === 2 ? '2' : '0') : pos ? 'I' : '0', 8, { fill: live ? 'var(--accent)' : 'currentColor' })}
+      </g>
+    );
+  },
+
+  emergencyStop: ({ w, h, props, state, live }) => {
+    const latched = !!state?.latched;
+    return (
+      <g>
+        {pilotBody(w, h, { stroke: '#c0322b' })}
+        {contactRow(contactColumns(parseContacts(props.contacts), PILOT_X0), h, latched, live, 13)}
+        <path d={`M4 ${h / 2 - 8} a8 8 0 0 1 0 16 z`} fill="#c0322b" stroke="none" transform={`translate(${latched ? 3 : 0} 0)`} />
+        {rect(11, h / 2 - 2, 4, 4, { fill: '#e0a33a', stroke: 'none' })}
+        {latched && live ? text(w / 2, 4, 'STOP', 7, { fill: 'var(--fail)' }) : null}
+      </g>
+    );
+  },
+
+  limitSwitch: ({ w, h, props, state, live }) => {
+    const on = !!state?.actuated;
+    return (
+      <g>
+        {pilotBody(w, h)}
+        {contactRow(contactColumns(parseContacts(props.contacts), PILOT_X0), h, on, live, 13)}
+        {/* roller lever */}
+        {line(8, h / 2 + (on ? 0 : 6), 15, h / 2)}
+        {circle(6, h / 2 + (on ? 0 : 7), 3)}
+      </g>
+    );
+  },
 };
 
 function formatReading(v: number | undefined, mode: string): string {

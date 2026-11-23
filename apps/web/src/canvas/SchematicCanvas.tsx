@@ -13,6 +13,8 @@ import {
   type Box,
 } from './geometry.js';
 import { Minimap } from './Minimap.js';
+import { AUTO_ROLE, inferRole } from './autoRole.js';
+import { setViewCenter, onFocusRequest } from './viewport.js';
 import { useIsMobile, useIsTouch } from '../hooks/useMediaQuery.js';
 
 interface Pending {
@@ -82,6 +84,24 @@ export function SchematicCanvas(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
+  useEffect(() => {
+    const r = svgRef.current?.getBoundingClientRect();
+    if (!r) return;
+    setViewCenter((r.width / 2 - view.x) / view.zoom, (r.height / 2 - view.y) / view.zoom);
+  }, [view]);
+
+  useEffect(() => {
+    onFocusRequest((x, y) => {
+      const r = svgRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setView((v) => {
+        const zoom = Math.max(v.zoom, isMobile ? 1 : 0.8);
+        return { zoom, x: r.width / 2 - x * zoom, y: r.height / 2 - y * zoom };
+      });
+    });
+    return () => onFocusRequest(null);
+  }, [isMobile]);
+
   /* ---------------- wiring ---------------- */
 
   const compatible = useMemo(() => {
@@ -94,7 +114,13 @@ export function SchematicCanvas(): JSX.Element {
     for (const c of project.components) {
       for (const term of terminalsOf(c.type, c.props)) {
         if (c.id === pending.comp && term.id === pending.terminal) continue;
-        if (terminalsCompatible(fromDef, term, ui.drawRole)) set.add(`${c.id}:${term.id}`);
+        const ok = ui.drawRole === AUTO_ROLE
+          ? term.role === fromDef.role || term.role === 'any' || fromDef.role === 'any' ||
+            (term.role === 'ctrl' && fromDef.role !== 'PE' && fromDef.role !== 'earth') ||
+            (fromDef.role === 'ctrl' && term.role !== 'PE' && term.role !== 'earth') ||
+            (term.role === 'earth' && fromDef.role === 'PE') || (term.role === 'PE' && fromDef.role === 'earth')
+          : terminalsCompatible(fromDef, term, ui.drawRole);
+        if (ok) set.add(`${c.id}:${term.id}`);
       }
     }
     return set;
@@ -107,10 +133,16 @@ export function SchematicCanvas(): JSX.Element {
         setPending(null);
         return;
       }
+      const from = { comp: pending.comp, terminal: pending.terminal };
+      const to = { comp: compId, terminal: terminalId };
+      const role: ConductorRole =
+        ui.drawRole === AUTO_ROLE
+          ? inferRole(project.components, project.wires, from, to)
+          : (ui.drawRole as ConductorRole);
       const id = store.getState().addWire({
-        from: { comp: pending.comp, terminal: pending.terminal },
-        to: { comp: compId, terminal: terminalId },
-        role: ui.drawRole as ConductorRole,
+        from,
+        to,
+        role,
         csa: ui.drawCsa,
         length: ui.drawLength,
         material: 'Cu',
@@ -121,7 +153,7 @@ export function SchematicCanvas(): JSX.Element {
       if (!id) ui.showToast(t('canvas.alreadyConnected'), 'error');
       setPending(null);
     },
-    [pending, store, ui, project.settings.defaultInstallMethod, t],
+    [pending, store, ui, project.components, project.wires, project.settings.defaultInstallMethod, t],
   );
 
   const onTerminalClick = useCallback(
@@ -626,7 +658,7 @@ export function SchematicCanvas(): JSX.Element {
       </svg>
 
       {pending && (
-        <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded px-3 py-1 text-xs"
+        <div className="pointer-events-none absolute bottom-16 left-1/2 max-w-[90vw] -translate-x-1/2 rounded px-3 py-1.5 text-center text-xs shadow"
              style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)' }}>
           {t('canvas.wireHint')} · {t('canvas.wireCancel')}
         </div>

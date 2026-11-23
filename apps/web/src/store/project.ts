@@ -79,6 +79,13 @@ interface ProjectState {
   setSettings(patch: Partial<Project['settings']>): void;
 }
 
+const DESIGNATION: Record<string, string> = {
+  contactor: 'KM', motorContactor: 'KM', controlRelay: 'K', timeRelay: 'KT', impulseRelay: 'KR',
+  stairTimer: 'KT', pushButton: 'SB', selectorSwitch: 'SA', emergencyStop: 'SB', limitSwitch: 'SQ',
+  signalLamp: 'HL', overloadRelay: 'FR', motor3f: 'M', switch1: 'S', switch5: 'S', switch6: 'S', switch7: 'S',
+  button: 'S', lampE27: 'E', ledPanel: 'E', socket16: 'XS',
+};
+
 function newEmpty(): Project {
   const p = emptyProject(uid('p'), 'Untitled');
   return p;
@@ -199,6 +206,15 @@ export const useProject = create<ProjectState>((set, get) => ({
           return d?.flags?.overcurrent || d?.flags?.rcd;
         }).length;
         comp.label = `F${n + 1}`;
+      } else {
+        // Reference designations as drawn in Czech control schematics.
+        const prefix = DESIGNATION[type];
+        if (prefix) {
+          const used = new Set(p.components.map((c) => c.label));
+          let n = 1;
+          while (used.has(`${prefix}${n}`)) n++;
+          comp.label = `${prefix}${n}`;
+        }
       }
       p.components.push(comp);
     });

@@ -6,14 +6,18 @@ import { terminalDefs } from './terminals.js';
 import { wiringDefs } from './wiring.js';
 import { loadDefs } from './loads.js';
 import { instrumentDefs } from './instruments.js';
+import { pilotDefs } from './pilot.js';
 
 export * from './types.js';
 export * from './common.js';
+export * from './contacts.js';
+export { PILOT_X0 } from './pilot.js';
 
 export const ALL_DEFS: ComponentDef[] = [
   ...supplyDefs,
   ...protectionDefs,
   ...switchingDefs,
+  ...pilotDefs,
   ...terminalDefs,
   ...wiringDefs,
   ...loadDefs,
@@ -36,6 +40,7 @@ export const CATEGORIES: Category[] = [
   'supply',
   'protection',
   'switching',
+  'relays',
   'control',
   'terminals',
   'wiring',

@@ -54,7 +54,7 @@ export const useUi = create<UiState>((set) => ({
   showGrid: true,
   snap: true,
   showMinimap: true,
-  drawRole: 'L1',
+  drawRole: 'auto',
   drawCsa: 2.5,
   drawLength: 5,
   highlight: [],

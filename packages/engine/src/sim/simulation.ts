@@ -176,7 +176,18 @@ export class Simulator {
     const st = this.state(compId);
     switch (action) {
       case 'toggle':
-        if ('pos' in st) st.pos = st.pos === 1 ? 2 : 1;
+        if ('pos3' in st) {
+          // A selector passes through 0: 0 → 1 → 0 → 2 → 0 for a three-position one.
+          const props = effectiveProps(comp.type, comp.props);
+          if (props.positions === '1-0-2') {
+            if (st.pos3 === 0) {
+              st.pos3 = st.lastSide === 1 ? 2 : 1;
+              st.lastSide = st.pos3;
+            } else st.pos3 = 0;
+          } else st.pos3 = st.pos3 ? 0 : 1;
+        } else if ('latched' in st) st.latched = !st.latched;
+        else if ('actuated' in st) st.actuated = !st.actuated;
+        else if ('pos' in st) st.pos = st.pos === 1 ? 2 : 1;
         else if ('posA' in st) st.posA = st.posA === 1 ? 2 : 1;
         else if ('crossed' in st) st.crossed = !st.crossed;
         else if ('plugged' in st) st.plugged = !st.plugged;

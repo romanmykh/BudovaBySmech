@@ -139,6 +139,17 @@ export function makeLoad(o: LoadOptions): ComponentDef {
           u = Math.max(u, uc);
           i = Math.max(i, ic);
         }
+        // Phase sequence at the terminals: +1 clockwise (L1-L2-L3), -1 reversed,
+        // 0 when a phase is missing — the motor then hums instead of running.
+        const vs = ['L1', 'L2', 'L3'].map((c) => ctx.sol.v(ctx.node(`in.${c}`)));
+        const mags = vs.map((v) => Math.hypot(v.re, v.im));
+        if (mags.every((m) => m > 0.5 * 230)) {
+          const a1 = Math.atan2(vs[0]!.im, vs[0]!.re);
+          const a2 = Math.atan2(vs[1]!.im, vs[1]!.re);
+          let d = ((a1 - a2) * 180) / Math.PI;
+          d = ((d % 360) + 360) % 360;
+          ctx.meas('rotation', d > 60 && d < 180 ? 1 : d > 180 && d < 300 ? -1 : 0);
+        } else ctx.meas('rotation', 0);
       } else {
         u = ctx.vd(ctx.node('in.L'), ctx.node('in.N'));
         i = ctx.i('z.L');

@@ -15,3 +15,4 @@ packages/*/src/**/*.d.ts
 apps/*/src/**/*.js
 apps/*/src/**/*.d.ts
 *.tsbuildinfo
+__pycache__/

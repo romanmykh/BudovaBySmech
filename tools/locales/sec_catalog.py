@@ -123,4 +123,11 @@ add({
 "comp.rcdTester": ["RCD tester", "Tester proudových chráničů", "Тестер ПЗВ", "Tester wyłączników różnicowoprądowych", "Тестер УЗО"],
 "comp.phaseTester": ["Phase rotation tester", "Zkoušečka sledu fází", "Індикатор чергування фаз", "Wskaźnik kolejności faz", "Индикатор чередования фаз"],
 "comp.socketTester": ["Socket tester", "Zkoušečka zásuvek", "Тестер розеток", "Tester gniazd", "Тестер розеток"],
+"cat.relays": ["Contactors, relays & pilot devices", "Stykače, relé a ovladače", "Контактори, реле та кнопки", "Styczniki, przekaźniki i łączniki sterownicze", "Контакторы, реле и кнопки"],
+"comp.motorContactor": ["Motor contactor (AC-3)", "Motorový stykač (AC-3)", "Контактор двигуна (AC-3)", "Stycznik silnikowy (AC-3)", "Контактор двигателя (AC-3)"],
+"comp.controlRelay": ["Control relay (changeover)", "Pomocné relé (přepínací)", "Проміжне реле (перекидне)", "Przekaźnik pomocniczy (przełączny)", "Промежуточное реле (перекидное)"],
+"comp.pushButton": ["Control push button", "Ovládací tlačítko", "Кнопка керування", "Przycisk sterowniczy", "Кнопка управления"],
+"comp.selectorSwitch": ["Selector switch", "Ovládací přepínač", "Перемикач керування", "Przełącznik sterowniczy", "Переключатель управления"],
+"comp.emergencyStop": ["Emergency stop", "Nouzové zastavení (TOTAL STOP)", "Аварійна кнопка «Стоп»", "Wyłącznik bezpieczeństwa (grzybek)", "Аварийная кнопка «Стоп»"],
+"comp.limitSwitch": ["Limit switch", "Koncový spínač", "Кінцевий вимикач", "Łącznik krańcowy", "Концевой выключатель"],
 })

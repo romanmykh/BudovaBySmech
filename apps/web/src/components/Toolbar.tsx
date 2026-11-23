@@ -87,6 +87,7 @@ export function Toolbar(): JSX.Element {
         onChange={(e) => ui.set('drawRole', e.target.value)}
         title={t('canvas.role')}
       >
+        <option value="auto">{t('canvas.roleAuto')}</option>
         {ROLES.map((r) => (
           <option key={r} value={r}>
             {r}

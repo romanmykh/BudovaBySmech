@@ -1,4 +1,8 @@
-import type { ComponentDef, TerminalDef } from './types.js';
+import type { ComponentDef, TerminalDef, StampCtx, UpdateCtx } from './types.js';
+import {
+  parseContacts, contactsWidth, contactColumns, contactTerminals, stampContacts,
+  AUX_OPTIONS, RELAY_CONTACT_OPTIONS,
+} from './contacts.js';
 import { Poles, poleConductors, seriesTerminals, numOptions, strOptions, R_OPEN, R_CLOSED, isThreePhase } from './common.js';
 import { loadImpedance } from '../physics/network.js';
 
@@ -9,6 +13,67 @@ function poleWidth(poles: Poles): number {
 /** Coil of a 230 V modular device: ~4 VA, cos φ 0,7. */
 function coilZ(va: number, v: number, pf: number) {
   return loadImpedance(va * pf, v, pf);
+}
+
+const COIL_VOLTAGES = [12, 24, 48, 110, 230, 400];
+
+/** Coil between A1 and A2, rated for `va` volt-amperes at its rated voltage. */
+function stampCoil(ctx: StampCtx, va: number): void {
+  const z = coilZ(va, Number(ctx.props.coilV) || 230, 0.7);
+  ctx.Z(ctx.node('A1'), ctx.node('A2'), z.r, z.x, 'coil');
+}
+
+/**
+ * Electromagnet of a contactor or relay: picks up above 85 % of the rated coil
+ * voltage and drops out below 40 % (ČSN EN 60947-4-1), after ~20 ms.
+ */
+function coilUpdate(ctx: UpdateCtx, label: string, onKey = 'log.contactorOn', offKey = 'log.contactorOff'): void {
+  const coilV = Number(ctx.props.coilV) || 230;
+  const u = ctx.vd(ctx.node('A1'), ctx.node('A2'));
+  ctx.meas('U_coil', u);
+  const st = ctx.state;
+  const want = st.closed ? u > 0.4 * coilV : u > 0.85 * coilV;
+  if (u > 1.15 * coilV && !st.overVoltWarned) {
+    st.overVoltWarned = true;
+    ctx.log({ key: 'log.coilOvervoltage', vars: { label: ctx.comp.label || label, u: Math.round(u), un: coilV }, level: 'danger', comp: ctx.comp.id });
+  }
+  if (want !== !!st.closed) {
+    st.pickupTimer = (st.pickupTimer ?? 0) + ctx.env.dt;
+    if (st.pickupTimer >= 0.02) {
+      st.closed = want;
+      st.pickupTimer = 0;
+      ctx.invalidate();
+      ctx.log({ key: want ? onKey : offKey, vars: { label: ctx.comp.label || label }, level: 'info', comp: ctx.comp.id });
+    }
+  } else st.pickupTimer = 0;
+}
+
+/** Contactor armature position, with the Auto / 1 / 0 selector of a modular contactor. */
+function contactorActuated(props: any, state: any): boolean {
+  if (props.manual === 'on') return true;
+  if (props.manual === 'off') return false;
+  return !!state.closed;
+}
+
+function contactorWidth(p: any): number {
+  return poleWidth(p.poles as Poles) + 20 + contactsWidth(parseContacts(p.aux));
+}
+
+/** Main contacts marked 1-2, 3-4, 5-6, 7-8 (or 1/L1 - 2/T1 on a motor contactor). */
+function numberedMain(t: TerminalDef[], motor: boolean): TerminalDef[] {
+  let i = 0;
+  const order = new Map<string, number>();
+  for (const term of t) {
+    const cond = term.id.split('.')[1]!;
+    if (!order.has(cond)) order.set(cond, i++);
+  }
+  return t.map((term) => {
+    const [side, cond] = term.id.split('.') as [string, string];
+    const k = order.get(cond)!;
+    const n = side === 'in' ? 2 * k + 1 : 2 * k + 2;
+    const mark = motor ? `${n}/${side === 'in' ? 'L' : 'T'}${k + 1}` : `${n}`;
+    return { ...term, mark };
+  });
 }
 
 export const switchingDefs: ComponentDef[] = [
@@ -41,67 +106,124 @@ export const switchingDefs: ComponentDef[] = [
 
   {
     type: 'contactor',
-    category: 'switching',
+    category: 'relays',
     symbol: 'contactor',
-    modules: (p) => (isThreePhase(p.poles as Poles) ? 3 : 2),
-    size: (p) => ({ w: poleWidth(p.poles as Poles) + 20, h: 70 }),
-    keywords: ['stykač', 'contactor', 'stycznik', 'контактор'],
-    defaultProps: { inA: 25, poles: '4P', coilV: 230, nc: false },
+    modules: (p) => (isThreePhase(p.poles as Poles) ? 3 : 2) + Math.ceil(parseContacts(p.aux).length / 2),
+    size: (p) => ({ w: contactorWidth(p), h: 70 }),
+    keywords: ['stykač', 'instalační stykač', 'contactor', 'stycznik', 'контактор', 'NO', 'NC'],
+    defaultProps: { inA: 25, poles: '4P', coilV: 230, nc: false, ncCount: 0, aux: 'none', manual: 'auto' },
     props: [
       { key: 'inA', type: 'select', options: numOptions([16, 20, 25, 40, 63]), unit: 'A' },
       { key: 'poles', type: 'select', options: strOptions(['1P', '2P', '3P', '4P']) },
-      { key: 'coilV', type: 'select', options: numOptions([12, 24, 230, 400]), unit: 'V' },
-      { key: 'nc', type: 'bool' },
+      { key: 'ncCount', type: 'number', min: 0, max: 4, step: 1 },
+      { key: 'coilV', type: 'select', options: numOptions(COIL_VOLTAGES), unit: 'V' },
+      { key: 'aux', type: 'select', options: strOptions(AUX_OPTIONS) },
+      { key: 'manual', type: 'select', options: strOptions(['auto', 'on', 'off']) },
     ],
     terminals: (p) => {
-      const w = poleWidth(p.poles as Poles) + 20;
-      const t = seriesTerminals(p.poles as Poles, w - 20, 70);
-      t.push({ id: 'A1', role: 'ctrl', mark: 'A1', x: w - 10, y: 0, side: 'top' });
-      t.push({ id: 'A2', role: 'ctrl', mark: 'A2', x: w - 10, y: 70, side: 'bottom' });
+      const mw = poleWidth(p.poles as Poles);
+      const t = numberedMain(seriesTerminals(p.poles as Poles, mw, 70), false);
+      t.push({ id: 'A1', role: 'ctrl', mark: 'A1', x: mw + 10, y: 0, side: 'top' });
+      t.push({ id: 'A2', role: 'ctrl', mark: 'A2', x: mw + 10, y: 70, side: 'bottom' });
+      t.push(...contactTerminals(contactColumns(parseContacts(p.aux), mw + 20), 70));
       return t;
     },
     initState: () => ({ energised: false, closed: false, pickupTimer: 0 }),
     stamp: (ctx) => {
-      const coilV = Number(ctx.props.coilV) || 230;
-      const z = coilZ(4, coilV, 0.7);
-      ctx.Z(ctx.node('A1'), ctx.node('A2'), z.r, z.x, 'coil');
-      const nc = !!ctx.props.nc;
-      const on = nc ? !ctx.state.closed : ctx.state.closed;
-      for (const c of poleConductors(ctx.props.poles as Poles)) {
+      stampCoil(ctx, 4);
+      const closed = contactorActuated(ctx.props, ctx.state);
+      const cond = poleConductors(ctx.props.poles as Poles);
+      const nNc = ctx.props.nc ? cond.length : Math.max(0, Math.min(cond.length, Number(ctx.props.ncCount) || 0));
+      cond.forEach((c, i) => {
+        // The last `nNc` main contacts are break contacts (R1-R2 on the device).
+        const isNc = i >= cond.length - nNc;
+        const on = isNc ? !closed : closed;
         ctx.R(ctx.node(`in.${c.id}`), ctx.node(`out.${c.id}`), on ? R_CLOSED : R_OPEN, `p.${c.id}`);
-      }
+      });
+      stampContacts(ctx, contactColumns(parseContacts(ctx.props.aux), poleWidth(ctx.props.poles as Poles) + 20), closed);
     },
     update: (ctx) => {
-      const coilV = Number(ctx.props.coilV) || 230;
-      const u = ctx.vd(ctx.node('A1'), ctx.node('A2'));
-      ctx.meas('U_coil', u);
-      // Pick-up above 85 % Un, drop-out below 40 % Un (ČSN EN 60947-4-1).
-      const st = ctx.state;
-      const want = st.closed ? u > 0.4 * coilV : u > 0.85 * coilV;
-      if (want !== st.closed) {
-        st.pickupTimer = (st.pickupTimer ?? 0) + ctx.env.dt;
-        if (st.pickupTimer >= 0.02) {
-          st.closed = want;
-          st.pickupTimer = 0;
-          ctx.invalidate();
-          ctx.log({
-            key: want ? 'log.contactorOn' : 'log.contactorOff',
-            vars: { label: ctx.comp.label || 'KM' },
-            level: 'info',
-            comp: ctx.comp.id,
-          });
-        }
-      } else st.pickupTimer = 0;
+      coilUpdate(ctx, 'KM');
       let m = 0;
       for (const c of poleConductors(ctx.props.poles as Poles)) m = Math.max(m, ctx.i(`p.${c.id}`));
       ctx.meas('I', m);
-      ctx.meas('closed', st.closed ? 1 : 0);
+      ctx.meas('closed', contactorActuated(ctx.props, ctx.state) ? 1 : 0);
+    },
+  },
+
+  {
+    type: 'motorContactor',
+    category: 'relays',
+    symbol: 'motorContactor',
+    size: (p) => ({ w: 100 + contactsWidth(parseContacts(p.aux)), h: 80 }),
+    keywords: ['stykač', 'motorový stykač', 'AC-3', 'contactor', 'stycznik', 'пускатель', 'пускач', 'контактор'],
+    defaultProps: { inA: 9, coilV: 230, aux: '1NO+1NC' },
+    props: [
+      { key: 'inA', type: 'select', options: numOptions([9, 12, 18, 25, 32, 40, 50, 65, 80]), unit: 'A' },
+      { key: 'coilV', type: 'select', options: numOptions(COIL_VOLTAGES), unit: 'V' },
+      { key: 'aux', type: 'select', options: strOptions(AUX_OPTIONS) },
+    ],
+    terminals: (p) => {
+      const t = numberedMain(seriesTerminals('3P', 80, 80), true);
+      t.push({ id: 'A1', role: 'ctrl', mark: 'A1', x: 90, y: 0, side: 'top' });
+      t.push({ id: 'A2', role: 'ctrl', mark: 'A2', x: 90, y: 80, side: 'bottom' });
+      t.push(...contactTerminals(contactColumns(parseContacts(p.aux), 100), 80));
+      return t;
+    },
+    initState: () => ({ closed: false, pickupTimer: 0 }),
+    stamp: (ctx) => {
+      stampCoil(ctx, 8);
+      const closed = !!ctx.state.closed;
+      for (const c of ['L1', 'L2', 'L3']) {
+        ctx.R(ctx.node(`in.${c}`), ctx.node(`out.${c}`), closed ? R_CLOSED : R_OPEN, `p.${c}`);
+      }
+      stampContacts(ctx, contactColumns(parseContacts(ctx.props.aux), 100), closed);
+    },
+    update: (ctx) => {
+      coilUpdate(ctx, 'KM');
+      let m = 0;
+      for (const c of ['L1', 'L2', 'L3']) m = Math.max(m, ctx.i(`p.${c}`));
+      ctx.meas('I', m);
+      ctx.meas('closed', ctx.state.closed ? 1 : 0);
+      const inA = Number(ctx.props.inA) || 9;
+      if (m > inA * 1.05 && !ctx.state.overWarned) {
+        ctx.state.overWarned = true;
+        ctx.log({ key: 'log.contactorOverload', vars: { label: ctx.comp.label || 'KM', i: m.toFixed(1), inA }, level: 'warn', comp: ctx.comp.id });
+      }
+    },
+  },
+
+  {
+    type: 'controlRelay',
+    category: 'relays',
+    symbol: 'controlRelay',
+    modules: 1,
+    size: (p) => ({ w: 30 + contactsWidth(parseContacts(p.contacts)), h: 70 }),
+    keywords: ['relé', 'pomocné relé', 'přepínací kontakt', 'relay', 'przekaźnik', 'реле', 'проміжне реле', 'промежуточное реле'],
+    defaultProps: { coilV: 230, contacts: '2CO' },
+    props: [
+      { key: 'coilV', type: 'select', options: numOptions(COIL_VOLTAGES), unit: 'V' },
+      { key: 'contacts', type: 'select', options: strOptions(RELAY_CONTACT_OPTIONS) },
+    ],
+    terminals: (p) => [
+      { id: 'A1', role: 'ctrl', mark: 'A1', x: 15, y: 0, side: 'top' },
+      { id: 'A2', role: 'ctrl', mark: 'A2', x: 15, y: 70, side: 'bottom' },
+      ...contactTerminals(contactColumns(parseContacts(p.contacts), 30), 70),
+    ],
+    initState: () => ({ closed: false, pickupTimer: 0 }),
+    stamp: (ctx) => {
+      stampCoil(ctx, 1.5);
+      stampContacts(ctx, contactColumns(parseContacts(ctx.props.contacts), 30), !!ctx.state.closed);
+    },
+    update: (ctx) => {
+      coilUpdate(ctx, 'K', 'log.relayOn', 'log.relayOff');
+      ctx.meas('closed', ctx.state.closed ? 1 : 0);
     },
   },
 
   {
     type: 'impulseRelay',
-    category: 'switching',
+    category: 'relays',
     symbol: 'impulseRelay',
     modules: 1,
     size: () => ({ w: 60, h: 70 }),
@@ -141,7 +263,7 @@ export const switchingDefs: ComponentDef[] = [
 
   {
     type: 'stairTimer',
-    category: 'control',
+    category: 'relays',
     symbol: 'stairTimer',
     modules: 1,
     size: () => ({ w: 60, h: 70 }),
@@ -192,62 +314,111 @@ export const switchingDefs: ComponentDef[] = [
 
   {
     type: 'timeRelay',
-    category: 'control',
+    category: 'relays',
     symbol: 'timeRelay',
     modules: 1,
-    size: () => ({ w: 60, h: 70 }),
-    keywords: ['časové relé', 'time relay', 'przekaźnik czasowy'],
-    defaultProps: { mode: 'onDelay', delay: 10, coilV: 230 },
+    size: () => ({ w: 70, h: 70 }),
+    keywords: ['časové relé', 'zpožďovací relé', 'blikač', 'time relay', 'przekaźnik czasowy', 'реле часу', 'реле времени'],
+    defaultProps: { mode: 'onDelay', delay: 10, offTime: 1, coilV: 230 },
     props: [
-      { key: 'mode', type: 'select', options: strOptions(['onDelay', 'offDelay']) },
+      { key: 'mode', type: 'select', options: strOptions(['onDelay', 'offDelay', 'interval', 'flasher']) },
       { key: 'delay', type: 'number', unit: 's', min: 0.1, max: 3600, step: 0.5 },
-      { key: 'coilV', type: 'select', options: numOptions([12, 24, 230]), unit: 'V' },
+      { key: 'offTime', type: 'number', unit: 's', min: 0.1, max: 3600, step: 0.5, when: (p) => p.mode === 'flasher' },
+      { key: 'coilV', type: 'select', options: numOptions(COIL_VOLTAGES), unit: 'V' },
     ],
     terminals: () => [
       { id: 'A1', role: 'ctrl', mark: 'A1', x: 15, y: 0, side: 'top' },
       { id: 'A2', role: 'ctrl', mark: 'A2', x: 15, y: 70, side: 'bottom' },
-      { id: 'in.L', role: 'L', mark: '15', x: 45, y: 0, side: 'top' },
-      { id: 'out.L', role: 'L', mark: '18', x: 45, y: 70, side: 'bottom' },
+      { id: 'in.L', role: 'ctrl', mark: '15', x: 50, y: 0, side: 'top' },
+      { id: 'out.NC', role: 'ctrl', mark: '16', x: 40, y: 70, side: 'bottom' },
+      { id: 'out.L', role: 'ctrl', mark: '18', x: 60, y: 70, side: 'bottom' },
     ],
-    initState: () => ({ closed: false, timer: 0 }),
+    initState: () => ({ closed: false, timer: 0, coilWasOn: false }),
     stamp: (ctx) => {
-      const z = coilZ(3, Number(ctx.props.coilV) || 230, 0.7);
-      ctx.Z(ctx.node('A1'), ctx.node('A2'), z.r, z.x, 'coil');
-      ctx.R(ctx.node('in.L'), ctx.node('out.L'), ctx.state.closed ? R_CLOSED : R_OPEN, 'p.L');
+      stampCoil(ctx, 2);
+      const c = !!ctx.state.closed;
+      ctx.R(ctx.node('in.L'), ctx.node('out.L'), c ? R_CLOSED : R_OPEN, 'p.L');
+      ctx.R(ctx.node('in.L'), ctx.node('out.NC'), c ? R_OPEN : R_CLOSED, 'p.NC');
     },
     update: (ctx) => {
       const coilV = Number(ctx.props.coilV) || 230;
       const on = ctx.vd(ctx.node('A1'), ctx.node('A2')) > 0.7 * coilV;
-      const delay = Number(ctx.props.delay) || 10;
+      const delay = Math.max(0.05, Number(ctx.props.delay) || 10);
       const st = ctx.state;
-      if (ctx.props.mode === 'onDelay') {
-        if (on) {
-          st.timer += ctx.env.dt;
-          if (st.timer >= delay && !st.closed) {
-            st.closed = true;
-            ctx.invalidate();
-          }
-        } else {
-          st.timer = 0;
-          if (st.closed) {
-            st.closed = false;
-            ctx.invalidate();
-          }
+      const set = (v: boolean) => {
+        if (st.closed !== v) {
+          st.closed = v;
+          ctx.invalidate();
         }
-      } else {
-        if (on) {
-          st.timer = delay;
-          if (!st.closed) {
-            st.closed = true;
-            ctx.invalidate();
+      };
+      const rising = on && !st.coilWasOn;
+      st.coilWasOn = on;
+      switch (ctx.props.mode) {
+        case 'offDelay':
+          // Contact closes at once and opens `delay` after the coil drops.
+          if (on) {
+            st.timer = delay;
+            set(true);
+          } else if (st.timer > 0) {
+            st.timer -= ctx.env.dt;
+            if (st.timer <= 0) {
+              st.timer = 0;
+              set(false);
+            }
           }
-        } else if (st.timer > 0) {
+          break;
+        case 'interval':
+          // Contact closes at once on energising and opens after `delay`.
+          if (rising) {
+            st.timer = delay;
+            set(true);
+          }
+          if (!on) {
+            st.timer = 0;
+            set(false);
+          } else if (st.timer > 0) {
+            st.timer -= ctx.env.dt;
+            if (st.timer <= 0) {
+              st.timer = 0;
+              set(false);
+            }
+          }
+          break;
+        case 'flasher': {
+          // Cyclic: `delay` closed, `offTime` open, for as long as the coil is on.
+          const off = Math.max(0.05, Number(ctx.props.offTime) || 1);
+          if (!on) {
+            st.timer = 0;
+            set(false);
+            break;
+          }
+          if (rising) {
+            st.timer = delay;
+            set(true);
+            break;
+          }
           st.timer -= ctx.env.dt;
-          if (st.timer <= 0 && st.closed) {
-            st.closed = false;
-            ctx.invalidate();
+          if (st.timer <= 0) {
+            const next = !st.closed;
+            st.timer = next ? delay : off;
+            set(next);
           }
+          break;
         }
+        default:
+          // On delay: the contact closes `delay` after the coil is energised.
+          if (on) {
+            if (!st.closed) {
+              st.timer += ctx.env.dt;
+              if (st.timer >= delay) {
+                st.timer = 0;
+                set(true);
+              }
+            }
+          } else {
+            st.timer = 0;
+            set(false);
+          }
       }
       ctx.meas('timer', st.timer);
       ctx.meas('closed', st.closed ? 1 : 0);

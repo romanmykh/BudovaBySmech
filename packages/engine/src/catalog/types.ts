@@ -5,6 +5,7 @@ export type Category =
   | 'supply'
   | 'protection'
   | 'switching'
+  | 'relays'
   | 'control'
   | 'terminals'
   | 'wiring'

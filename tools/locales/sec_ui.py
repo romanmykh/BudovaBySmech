@@ -171,8 +171,8 @@ add({
 "template.intermediate.desc": ["Three points of control on one lighting circuit.", "Tři ovládací místa jednoho světelného obvodu.", "Три місця керування одним колом освітлення.", "Trzy miejsca sterowania jednym obwodem.", "Три места управления одной цепью освещения."],
 "template.impulse.name": ["Lighting with an impulse relay", "Osvětlení s impulzním relé", "Освітлення з імпульсним реле", "Oświetlenie z przekaźnikiem bistabilnym", "Освещение с импульсным реле"],
 "template.impulse.desc": ["Two push buttons and a latching relay in the board.", "Dvě tlačítka a impulzní relé v rozvaděči.", "Дві кнопки та імпульсне реле в щиті.", "Dwa przyciski i przekaźnik bistabilny w rozdzielnicy.", "Две кнопки и импульсное реле в щите."],
-"template.motor.name": ["Contactor-controlled motor", "Motor ovládaný stykačem", "Двигун з контакторним керуванням", "Silnik sterowany stycznikiem", "Двигатель с контакторным управлением"],
-"template.motor.desc": ["Start/stop control with a thermal overload relay.", "Ovládání start/stop s tepelným relé.", "Керування пуск/стоп із тепловим реле.", "Sterowanie start/stop z przekaźnikiem termicznym.", "Управление пуск/стоп с тепловым реле."],
+"template.motor.name": ["Motor START/STOP with self-holding", "Motor START/STOP se samodržením", "Двигун ПУСК/СТОП із самоутриманням", "Silnik START/STOP z podtrzymaniem", "Двигатель ПУСК/СТОП с самоподхватом"],
+"template.motor.desc": ["Motor contactor held in by its own 13-14 contact, thermal overload relay 95-96 in the control circuit, run and fault lamps.", "Motorový stykač drží vlastní kontakt 13-14, tepelné relé 95-96 v ovládacím obvodu, signálky chodu a poruchy.", "Контактор утримується власним контактом 13-14, теплове реле 95-96 у колі керування, лампи роботи та аварії.", "Stycznik podtrzymywany własnym stykiem 13-14, przekaźnik termiczny 95-96 w obwodzie sterowania, lampki pracy i awarii.", "Контактор удерживается своим контактом 13-14, тепловое реле 95-96 в цепи управления, лампы работы и аварии."],
 })
 
 # ---------------------------------------------------------------- shortcuts
@@ -188,4 +188,11 @@ add({
 "shortcut.rotate": ["Rotate the selection", "Otočit výběr", "Повернути виділене", "Obróć zaznaczenie", "Повернуть выделенное"],
 "shortcut.fit": ["Fit the drawing to the view", "Přizpůsobit výkres oknu", "Вмістити креслення у вікно", "Dopasuj rysunek do okna", "Вписать чертёж в окно"],
 "shortcut.escape": ["Cancel the current action", "Zrušit probíhající akci", "Скасувати поточну дію", "Anuluj bieżącą akcję", "Отменить текущее действие"],
+"library.basic": ["Basic parts", "Základní prvky", "Основні елементи", "Podstawowe elementy", "Основные элементы"],
+"library.tapHint": ["Tap or click a part to add it to the drawing.", "Klepnutím nebo kliknutím přidáte prvek do výkresu.", "Торкніться або клацніть, щоб додати елемент на креслення.", "Dotknij lub kliknij, aby dodać element do rysunku.", "Нажмите на элемент, чтобы добавить его на чертёж."],
+"canvas.roleAuto": ["Auto", "Auto", "Авто", "Auto", "Авто"],
+"template.reverse.name": ["Reversing motor starter", "Reverzace motoru", "Реверс двигуна", "Nawrót silnika", "Реверс двигателя"],
+"template.reverse.desc": ["Two contactors with self-holding and an electrical interlock through NC contacts 21-22.", "Dva stykače se samodržením a elektrickým blokováním přes rozpínací kontakty 21-22.", "Два контактори із самоутриманням та електричним блокуванням через розмикальні контакти 21-22.", "Dwa styczniki z podtrzymaniem i blokadą elektryczną przez styki rozwierne 21-22.", "Два контактора с самоподхватом и электрической блокировкой через размыкающие контакты 21-22."],
+"template.timed.name": ["Stair lights: time relay + contactor", "Schodiště: časové relé + stykač", "Сходи: реле часу + контактор", "Klatka: przekaźnik czasowy + stycznik", "Лестница: реле времени + контактор"],
+"template.timed.desc": ["Push buttons start an off-delay time relay that holds a contactor for 30 s.", "Tlačítka spustí relé se zpožděným odpadem, které drží stykač 30 s.", "Кнопки запускають реле із затримкою вимикання, що тримає контактор 30 с.", "Przyciski uruchamiają przekaźnik ze zwłoką wyłączenia, który trzyma stycznik 30 s.", "Кнопки запускают реле с задержкой отключения, которое держит контактор 30 с."],
 })

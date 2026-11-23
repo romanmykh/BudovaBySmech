@@ -120,6 +120,39 @@ animation:
   impedance meter, RCD tester (trip time and trip current at ½, 1, 2 and 5×IΔn),
   phase rotation tester and socket tester.
 
+## Contactors, relays and control circuits
+
+Control circuits are simulated on the same network as the power circuit, so a
+self-holding contact, an interlock or a time relay works — or fails — for the
+same physical reason it would on site. Contacts carry the markings printed on
+the device (ČSN EN 50005 / EN 60947-5-1): NO 13-14, NC 21-22, changeover
+11-12-14, coil A1-A2.
+
+| Device | What can be set |
+|---|---|
+| Modular contactor | 1–4 poles, any number of them NC, coil 12–400 V, auxiliary contacts, Auto / 1 / 0 selector |
+| Motor contactor (AC-3) | 9–80 A, main contacts 1/L1-2/T1 … 5/L3-6/T3, auxiliaries up to 2NO+2NC |
+| Control relay | 1–4 changeover contacts or NO/NC sets, coil 12–400 V |
+| Time relay | on delay, off delay, interval, flasher; changeover contact 15-16-18 |
+| Thermal overload relay | 95-96 NC and 97-98 NO, reset by pressing it once it has cooled |
+| Motor starter | optional 13-14 / 21-22 auxiliary contacts |
+| Push button, selector 0-1 and 1-0-2, emergency stop (latching), limit switch | contact sets as above |
+
+The coil picks up above 85 % and drops out below 40 % of its rated voltage, and
+a three-phase load shows its direction of rotation, so a reversing starter can be
+checked end to end. Templates: START/STOP with self-holding and run/fault lamps,
+reversing with an electrical interlock, and stair lights on a time relay and a
+contactor.
+
+## Working on a phone
+
+Tap a part in the library to drop it where you are looking; the view zooms in on
+it. Tap a terminal, then another, to draw a conductor — with the conductor type
+on **Auto** it becomes N or PE on a neutral or protective terminal, continues the
+phase already on either end, and is a control conductor between control
+terminals. A selected device gets a bar with rotate, properties, duplicate and
+delete. Undo and redo sit in the top bar.
+
 ## Design rule check
 
 One click produces a pass / warning / fail checklist that can be exported as

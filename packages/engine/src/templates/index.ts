@@ -128,30 +128,134 @@ export function impulseLighting(): Project {
   return b.build();
 }
 
+/**
+ * Direct-on-line start with self-holding (samodržný kontakt) and the overload
+ * relay contact 95-96 in the control circuit. Green lamp via 23-24 shows the
+ * motor running, the red one via 97-98 shows an overload trip.
+ */
 export function contactorMotor(): Project {
-  const b = new ProjectBuilder('Motor ovládaný stykačem', 'tpl-motor');
+  const b = new ProjectBuilder('Motor: START/STOP se samodržením', 'tpl-motor');
   origin(b, { phases: 3, main: 32 });
   b.circuit('c1', 'Motor', 'motor', '#7c5cbf');
-  b.add('mcb', 'q1', { inA: 16, curve: 'C', poles: '3P' }, { x: 40, y: 240, label: 'F1', circuit: 'c1' });
-  b.add('contactor', 'km1', { poles: '3P', coilV: 230, inA: 25 }, { x: 200, y: 240, label: 'KM1', circuit: 'c1' });
-  b.add('overloadRelay', 'f2', { setA: 5, class: 10 }, { x: 200, y: 360, label: 'F2', circuit: 'c1' });
-  b.add('button', 'bs', { nc: true }, { x: 420, y: 300, label: 'STOP', circuit: 'c1' });
-  b.add('button', 'bo', {}, { x: 520, y: 300, label: 'START', circuit: 'c1' });
-  b.add('motor3f', 'm1', { watts: 2200, pf: 0.82 }, { x: 200, y: 480, label: 'M1', circuit: 'c1' });
+  b.add('mcb', 'q1', { inA: 16, curve: 'C', poles: '3P' }, { x: 40, y: 240, label: 'FA1', circuit: 'c1' });
+  b.add('mcb', 'fc', { inA: 6, curve: 'C', poles: '1P' }, { x: 380, y: 160, label: 'FA2', circuit: 'c1' });
+  b.add('motorContactor', 'km1', { inA: 9, coilV: 230, aux: '2NO+2NC' }, { x: 40, y: 360, label: 'KM1', circuit: 'c1' });
+  b.add('overloadRelay', 'f2', { setA: 5, class: 10 }, { x: 40, y: 500, label: 'FR1', circuit: 'c1' });
+  b.add('motor3f', 'm1', { watts: 2200, pf: 0.82 }, { x: 40, y: 640, label: 'M1', circuit: 'c1' });
+  b.add('pushButton', 'sb0', { contacts: '1NC', color: 'red' }, { x: 420, y: 300, label: 'SB0 STOP', circuit: 'c1' });
+  b.add('pushButton', 'sb1', { contacts: '1NO', color: 'green' }, { x: 420, y: 400, label: 'SB1 START', circuit: 'c1' });
+  b.add('signalLamp', 'hl1', { color: 'green', un: 230 }, { x: 640, y: 440, label: 'HL1', circuit: 'c1' });
+  b.add('signalLamp', 'hl2', { color: 'red', un: 230 }, { x: 720, y: 440, label: 'HL2', circuit: 'c1' });
   for (const ph of ['L1', 'L2', 'L3'] as const) {
     b.wire(`hj.out.${ph}`, `q1.in.${ph}`, ph, 6, 1);
     b.wire(`q1.out.${ph}`, `km1.in.${ph}`, ph, 2.5, 1, { circuit: 'c1' });
-    b.wire(`km1.out.${ph}`, `f2.in.${ph}`, ph, 2.5, 0.5, { circuit: 'c1' });
+    b.wire(`km1.out.${ph}`, `f2.in.${ph}`, ph, 2.5, 0.3, { circuit: 'c1' });
     b.wire(`f2.out.${ph}`, `m1.in.${ph}`, ph, 2.5, 12, { circuit: 'c1' });
   }
   b.wire('nb.t2', 'm1.in.N', 'N', 2.5, 12, { circuit: 'c1' });
   b.wire('pb.t2', 'm1.in.PE', 'PE', 2.5, 12, { circuit: 'c1' });
-  // Control circuit: start/stop with the overload relay contact in series.
-  b.wire('q1.out.L1', 'bs.c1', 'L1', 1.5, 4, { circuit: 'c1' });
-  b.wire('bs.c1.t1', 'bo.c1', 'L1', 1.5, 1, { circuit: 'c1' });
-  b.wire('bo.c1.t1', 'f2.nc.1', 'L1', 1.5, 2, { circuit: 'c1' });
-  b.wire('f2.nc.2', 'km1.A1', 'L1', 1.5, 2, { circuit: 'c1' });
-  b.wire('nb.t3', 'km1.A2', 'N', 1.5, 2, { circuit: 'c1' });
+  // Control circuit: FA2 → 95-96 → STOP 11-12 → START 13-14 ∥ KM1 13-14 → A1.
+  b.wire('q1.out.L1', 'fc.in.L', 'L1', 1.5, 0.5, { circuit: 'c1' });
+  b.wire('fc.out.L', 'f2.nc.1', 'CTRL', 1, 2, { circuit: 'c1' });
+  b.wire('f2.nc.2', 'sb0.k1.a', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('sb0.k1.b', 'sb1.k1.a', 'CTRL', 1, 1, { circuit: 'c1' });
+  b.wire('sb1.k1.b', 'km1.A1', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('sb0.k1.b', 'km1.k1.a', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('km1.k1.b', 'km1.A1', 'CTRL', 1, 0.2, { circuit: 'c1' });
+  b.wire('nb.t3', 'km1.A2', 'N', 1, 2, { circuit: 'c1' });
+  // Signalling.
+  b.wire('fc.out.L', 'km1.k2.a', 'CTRL', 1, 2, { circuit: 'c1' });
+  b.wire('km1.k2.b', 'hl1.in.L', 'CTRL', 1, 2, { circuit: 'c1' });
+  b.wire('fc.out.L', 'f2.no.1', 'CTRL', 1, 2, { circuit: 'c1' });
+  b.wire('f2.no.2', 'hl2.in.L', 'CTRL', 1, 2, { circuit: 'c1' });
+  b.wire('nb.t4', 'hl1.in.N', 'N', 1, 2, { circuit: 'c1' });
+  b.wire('hl1.in.N', 'hl2.in.N', 'N', 1, 0.3, { circuit: 'c1' });
+  return b.build();
+}
+
+/**
+ * Reversing starter: two contactors with L1 and L3 swapped on the reverse one,
+ * self-holding on each and an electrical interlock through the other
+ * contactor's NC contact 21-22, so both can never close at once.
+ */
+export function reversingMotor(): Project {
+  const b = new ProjectBuilder('Motor: reverzace s blokováním', 'tpl-reverse');
+  origin(b, { phases: 3, main: 32 });
+  b.circuit('c1', 'Motor', 'motor', '#7c5cbf');
+  b.add('mcb', 'q1', { inA: 16, curve: 'C', poles: '3P' }, { x: 40, y: 240, label: 'FA1', circuit: 'c1' });
+  b.add('mcb', 'fc', { inA: 6, curve: 'C', poles: '1P' }, { x: 460, y: 160, label: 'FA2', circuit: 'c1' });
+  b.add('motorContactor', 'km1', { inA: 9, coilV: 230, aux: '1NO+1NC' }, { x: 40, y: 380, label: 'KM1 →', circuit: 'c1' });
+  b.add('motorContactor', 'km2', { inA: 9, coilV: 230, aux: '1NO+1NC' }, { x: 220, y: 380, label: 'KM2 ←', circuit: 'c1' });
+  b.add('overloadRelay', 'f2', { setA: 5, class: 10 }, { x: 120, y: 540, label: 'FR1', circuit: 'c1' });
+  b.add('motor3f', 'm1', { watts: 2200, pf: 0.82 }, { x: 120, y: 680, label: 'M1', circuit: 'c1' });
+  b.add('pushButton', 'sb0', { contacts: '1NC', color: 'red' }, { x: 520, y: 300, label: 'SB0 STOP', circuit: 'c1' });
+  b.add('pushButton', 'sb1', { contacts: '1NO', color: 'green' }, { x: 460, y: 420, label: 'SB1 →', circuit: 'c1' });
+  b.add('pushButton', 'sb2', { contacts: '1NO', color: 'black' }, { x: 600, y: 420, label: 'SB2 ←', circuit: 'c1' });
+  for (const ph of ['L1', 'L2', 'L3'] as const) {
+    b.wire(`hj.out.${ph}`, `q1.in.${ph}`, ph, 6, 1);
+    b.wire(`q1.out.${ph}`, `km1.in.${ph}`, ph, 2.5, 1, { circuit: 'c1' });
+    b.wire(`km1.in.${ph}`, `km2.in.${ph}`, ph, 2.5, 0.2, { circuit: 'c1' });
+    b.wire(`km1.out.${ph}`, `f2.in.${ph}`, ph, 2.5, 0.3, { circuit: 'c1' });
+    b.wire(`f2.out.${ph}`, `m1.in.${ph}`, ph, 2.5, 12, { circuit: 'c1' });
+  }
+  // KM2 swaps L1 and L3.
+  b.wire('km2.out.L1', 'f2.in.L3', 'L3', 2.5, 0.3, { circuit: 'c1' });
+  b.wire('km2.out.L2', 'f2.in.L2', 'L2', 2.5, 0.3, { circuit: 'c1' });
+  b.wire('km2.out.L3', 'f2.in.L1', 'L1', 2.5, 0.3, { circuit: 'c1' });
+  b.wire('nb.t2', 'm1.in.N', 'N', 2.5, 12, { circuit: 'c1' });
+  b.wire('pb.t2', 'm1.in.PE', 'PE', 2.5, 12, { circuit: 'c1' });
+  // Control circuit.
+  b.wire('q1.out.L1', 'fc.in.L', 'L1', 1.5, 0.5, { circuit: 'c1' });
+  b.wire('fc.out.L', 'f2.nc.1', 'CTRL', 1, 2, { circuit: 'c1' });
+  b.wire('f2.nc.2', 'sb0.k1.a', 'CTRL', 1, 3, { circuit: 'c1' });
+  // Forward: STOP → SB1 13-14 ∥ KM1 13-14 → KM2 21-22 → KM1 A1.
+  b.wire('sb0.k1.b', 'sb1.k1.a', 'CTRL', 1, 1, { circuit: 'c1' });
+  b.wire('sb0.k1.b', 'km1.k1.a', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('km1.k1.b', 'sb1.k1.b', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('sb1.k1.b', 'km2.k2.a', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('km2.k2.b', 'km1.A1', 'CTRL', 1, 1, { circuit: 'c1' });
+  // Reverse: STOP → SB2 13-14 ∥ KM2 13-14 → KM1 21-22 → KM2 A1.
+  b.wire('sb0.k1.b', 'sb2.k1.a', 'CTRL', 1, 1, { circuit: 'c1' });
+  b.wire('sb0.k1.b', 'km2.k1.a', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('km2.k1.b', 'sb2.k1.b', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('sb2.k1.b', 'km1.k2.a', 'CTRL', 1, 3, { circuit: 'c1' });
+  b.wire('km1.k2.b', 'km2.A1', 'CTRL', 1, 1, { circuit: 'c1' });
+  b.wire('nb.t3', 'km1.A2', 'N', 1, 2, { circuit: 'c1' });
+  b.wire('km1.A2', 'km2.A2', 'N', 1, 0.2, { circuit: 'c1' });
+  return b.build();
+}
+
+/**
+ * Staircase lighting switched by a contactor through an off-delay time relay:
+ * a press of any button lights the stairs, which go dark a set time after.
+ */
+export function timedLighting(): Project {
+  const b = new ProjectBuilder('Osvětlení: časové relé + stykač', 'tpl-timed');
+  origin(b, { phases: 1, main: 25 });
+  b.circuit('c1', 'Schodiště', 'lighting', '#f0b429');
+  b.add('mcb', 'q1', { inA: 10, curve: 'B', poles: '1P' }, { x: 40, y: 240, label: 'FA1', circuit: 'c1' });
+  b.add('pushButton', 'sb1', { contacts: '1NO', color: 'white' }, { x: 220, y: 240, label: 'SB1', circuit: 'c1' });
+  b.add('pushButton', 'sb2', { contacts: '1NO', color: 'white' }, { x: 300, y: 240, label: 'SB2', circuit: 'c1' });
+  b.add('timeRelay', 'kt1', { mode: 'offDelay', delay: 30, coilV: 230 }, { x: 220, y: 380, label: 'KT1', circuit: 'c1' });
+  b.add('contactor', 'km1', { poles: '1P', coilV: 230, inA: 20 }, { x: 380, y: 380, label: 'KM1', circuit: 'c1' });
+  b.add('ledPanel', 'la1', { watts: 36 }, { x: 380, y: 540, label: 'E1', circuit: 'c1' });
+  b.add('ledPanel', 'la2', { watts: 36 }, { x: 480, y: 540, label: 'E2', circuit: 'c1' });
+  b.wire('hj.out.L', 'q1.in.L', 'L1', 10, 0.5);
+  b.wire('q1.out.L', 'sb1.k1.a', 'L1', 1.5, 6, { circuit: 'c1' });
+  b.wire('sb1.k1.a', 'sb2.k1.a', 'L1', 1.5, 6, { circuit: 'c1' });
+  b.wire('sb1.k1.b', 'kt1.A1', 'CTRL', 1.5, 6, { circuit: 'c1' });
+  b.wire('sb2.k1.b', 'sb1.k1.b', 'CTRL', 1.5, 6, { circuit: 'c1' });
+  b.wire('nb.t2', 'kt1.A2', 'N', 1.5, 1, { circuit: 'c1' });
+  b.wire('q1.out.L', 'kt1.in.L', 'L1', 1.5, 0.3, { circuit: 'c1' });
+  b.wire('kt1.out.L', 'km1.A1', 'CTRL', 1.5, 0.3, { circuit: 'c1' });
+  b.wire('kt1.A2', 'km1.A2', 'N', 1.5, 0.3, { circuit: 'c1' });
+  b.wire('q1.out.L', 'km1.in.L', 'L1', 1.5, 0.3, { circuit: 'c1' });
+  b.wire('km1.out.L', 'la1.in.L', 'L1', 1.5, 10, { circuit: 'c1' });
+  b.wire('la1.in.L', 'la2.in.L', 'L1', 1.5, 3, { circuit: 'c1' });
+  b.wire('nb.t3', 'la1.in.N', 'N', 1.5, 10, { circuit: 'c1' });
+  b.wire('la1.in.N', 'la2.in.N', 'N', 1.5, 3, { circuit: 'c1' });
+  b.wire('pb.t2', 'la1.in.PE', 'PE', 1.5, 10, { circuit: 'c1' });
+  b.wire('la1.in.PE', 'la2.in.PE', 'PE', 1.5, 3, { circuit: 'c1' });
   return b.build();
 }
 
@@ -337,6 +441,8 @@ export const TEMPLATES: TemplateDef[] = [
   { id: 'intermediate', category: 'teaching', build: intermediate },
   { id: 'impulse', category: 'teaching', build: impulseLighting },
   { id: 'motor', category: 'teaching', build: contactorMotor },
+  { id: 'reverse', category: 'teaching', build: reversingMotor },
+  { id: 'timed', category: 'teaching', build: timedLighting },
 ];
 
 export function templateById(id: string): Project | null {

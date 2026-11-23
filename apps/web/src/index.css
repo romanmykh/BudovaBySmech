@@ -92,7 +92,7 @@ body {
 
 /* Form controls inherit the theme rather than the browser default. */
 input, select, textarea, button { font: inherit; color: inherit; }
-input[type="text"], input[type="number"], input[type="email"], input[type="password"], select, textarea {
+input[type="text"], input[type="search"], input[type="number"], input[type="email"], input[type="password"], select, textarea {
   background: var(--bg-sunken);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -108,12 +108,13 @@ input[type="text"], input[type="number"], input[type="email"], input[type="passw
 @media (pointer: coarse) {
   .btn { min-height: 36px; padding: 7px 11px; }
   .btn-sm { min-height: 32px; padding: 5px 9px; font-size: 12px; }
-  input[type="text"], input[type="number"], input[type="email"], input[type="password"],
+  input[type="text"], input[type="search"], input[type="number"], input[type="email"], input[type="password"],
   select, textarea {
     font-size: 16px;
     padding: 7px 8px;
   }
   input[type="checkbox"] { width: 20px; height: 20px; }
+  .lib-item { min-height: 44px; font-size: 14px; }
   input[type="color"] { min-height: 32px; }
 }
 
@@ -144,6 +145,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px;
 .btn[data-on="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn-sm { padding: 2px 6px; font-size: 12px; }
+.lib-item { padding-top: 5px; padding-bottom: 5px; }
 .btn-danger { color: var(--fail); }
 /* Comfortable for a thumb; the recommended minimum is around 44 px. */
 .btn-touch { min-height: 40px; padding: 8px 12px; }

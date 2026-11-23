@@ -61,6 +61,8 @@ export function MobileTopBar(): JSX.Element {
   const running = useSim((s) => s.running);
   const sim = useSim();
   const saveState = useAuth((s) => s.saveState);
+  const past = useProject((s) => s.past.length);
+  const future = useProject((s) => s.future.length);
 
   return (
     <div
@@ -104,7 +106,7 @@ export function MobileTopBar(): JSX.Element {
             return (
               <button
                 key={m}
-                className="btn btn-touch shrink-0 !px-2.5"
+                className="btn btn-touch shrink-0 !px-2"
                 data-on={ui.mode === m}
                 onClick={() => ui.set('mode', m)}
                 aria-label={label}
@@ -115,12 +117,16 @@ export function MobileTopBar(): JSX.Element {
             );
           })}
           <span className="mx-0.5 h-5 w-px shrink-0" style={{ background: 'var(--border)' }} />
+          <button className="btn btn-touch shrink-0 !px-2.5" disabled={!past} onClick={() => useProject.getState().undo()} aria-label={t('action.undo')}>↶</button>
+          <button className="btn btn-touch shrink-0 !px-2.5" disabled={!future} onClick={() => useProject.getState().redo()} aria-label={t('action.redo')}>↷</button>
+          <span className="mx-0.5 h-5 w-px shrink-0" style={{ background: 'var(--border)' }} />
           <select
             className="!w-auto shrink-0"
             value={ui.drawRole}
             onChange={(e) => ui.set('drawRole', e.target.value)}
             aria-label={t('canvas.role')}
           >
+            <option value="auto">{t('canvas.roleAuto')}</option>
             {ROLES.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
@@ -135,15 +141,6 @@ export function MobileTopBar(): JSX.Element {
               <option key={c} value={c}>{c} mm²</option>
             ))}
           </select>
-          <input
-            type="number"
-            className="!w-16 shrink-0"
-            min={0}
-            step={0.5}
-            value={ui.drawLength}
-            onChange={(e) => ui.set('drawLength', Number(e.target.value))}
-            aria-label={t('prop.length')}
-          />
         </div>
       )}
     </div>

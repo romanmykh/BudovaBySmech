@@ -43,19 +43,19 @@ export function StatusBar(): JSX.Element {
       <span className="dim">
         {t('status.simTime')} <b className="text-[var(--text)]">{formatTime(results.t)}</b>
       </span>
-      <span className="dim">
+      <span className="dim hidden sm:inline">
         {t('status.perPhase')}{' '}
         <b className="text-[var(--live-l1)]">{i.L1.toFixed(1)}</b>/
         <b className="text-[var(--live-l2)]">{i.L2.toFixed(1)}</b>/
         <b className="text-[var(--live-l3)]">{i.L3.toFixed(1)}</b> A
       </span>
-      <span className="dim">
+      <span className="dim hidden md:inline">
         {t('status.imbalance')} <b className="text-[var(--text)]">{imbalance.toFixed(0)} %</b>
       </span>
       <span className="dim">
         {t('status.simultaneous')} <b className="text-[var(--text)]">{(results.totalP / 1000).toFixed(2)} kW</b>
       </span>
-      <span className="dim">
+      <span className="dim hidden md:inline">
         {t('status.installed')} <b className="text-[var(--text)]">{(installed / 1000).toFixed(2)} kW</b>
       </span>
       {results.maxTouchVoltage > 25 && (

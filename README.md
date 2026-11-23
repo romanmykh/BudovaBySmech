@@ -144,6 +144,25 @@ checked end to end. Templates: START/STOP with self-holding and run/fault lamps,
 reversing with an electrical interlock, and stair lights on a time relay and a
 contactor.
 
+## Wall switches
+
+Every Czech switch arrangement is in the library, numbered as on the device and
+in the catalogue: **1** one-way, **2** two-pole, **3** three-pole, **03**
+three-pole with N, **4** group switch 1-0-2, **5** series (two keys), **5A**
+double two-way with a common supply, **5B / 6+6** double two-way, **6** two-way,
+**7** intermediate and the **1/0** push button. On a two-key switch the left
+and right half of the symbol each work their own key in live mode.
+
+## Conductor routing
+
+A conductor without manual bend points is routed automatically: orthogonally,
+around every device body together with its label and rating text, with as few
+bends as possible and in its own lane beside conductors of other circuits, so
+two different conductors are never drawn over each other. Double-click a
+conductor to add a bend point and take over its route by hand. While a device is
+dragged the conductors follow a plain route and are re-routed when it is
+dropped.
+
 ## Working on a phone
 
 Tap a part in the library to drop it where you are looking; the view zooms in on

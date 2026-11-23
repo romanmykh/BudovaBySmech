@@ -1,6 +1,6 @@
-import { memo, type JSX } from 'react';
+import { memo, useMemo, type JSX } from 'react';
 import { roleColor, type Project, type Wire } from '@budova/engine';
-import { routeWire, pathOf, terminalPos, polylineMid } from './geometry.js';
+import { routeAll, roundedPathOf, polylineMid } from './geometry.js';
 
 export interface WireLayerProps {
   project: Project;
@@ -9,6 +9,8 @@ export interface WireLayerProps {
   highlighted: string[];
   live: boolean;
   showLabels: boolean;
+  /** A device is being dragged: draw plain routes until it is dropped. */
+  dragging?: boolean;
   /** Current read-outs are only legible above a certain zoom. */
   showCurrents: boolean;
   onSelect(e: React.PointerEvent, id: string): void;
@@ -25,21 +27,19 @@ function widthFor(csa: number): number {
 }
 
 function WireLayerImpl(p: WireLayerProps): JSX.Element {
-  const byId = new Map(p.project.components.map((c) => [c.id, c]));
+  const routes = useMemo(
+    () => routeAll(p.project.components, p.project.wires, !p.dragging),
+    [p.project.components, p.project.wires, p.dragging],
+  );
   const sel = new Set(p.selected);
   const hi = new Set(p.highlighted);
 
   return (
     <g>
       {p.project.wires.map((w: Wire) => {
-        const a = byId.get(w.from.comp);
-        const b = byId.get(w.to.comp);
-        if (!a || !b) return null;
-        const ta = terminalPos(a, w.from.terminal);
-        const tb = terminalPos(b, w.to.terminal);
-        if (!ta || !tb) return null;
-        const pts = routeWire(ta, tb, w.points ?? []);
-        const d = pathOf(pts);
+        const pts = routes.get(w.id);
+        if (!pts) return null;
+        const d = roundedPathOf(pts);
         const color = roleColor(w);
         const current = p.wireI[w.id] ?? 0;
         const flowing = p.live && current > 0.02;

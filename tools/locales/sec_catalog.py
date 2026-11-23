@@ -78,12 +78,17 @@ add({
 
 # ---------------------------------------------------------------- wiring accessories
 add({
-"comp.switch1": ["One-way switch (1)", "Vypínač řazení 1", "Вимикач одноклавішний", "Łącznik jednobiegunowy", "Выключатель одноклавишный"],
-"comp.switch5": ["Double switch (5)", "Vypínač řazení 5 (lustrový)", "Вимикач двоклавішний", "Łącznik świecznikowy", "Выключатель двухклавишный"],
-"comp.switch6": ["Two-way switch (6)", "Přepínač řazení 6 (schodišťový)", "Перемикач прохідний", "Łącznik schodowy", "Переключатель проходной"],
-"comp.switch66": ["Double two-way switch (6+6)", "Přepínač řazení 6+6", "Перемикач прохідний подвійний", "Łącznik schodowy podwójny", "Переключатель проходной двойной"],
-"comp.switch7": ["Intermediate switch (7)", "Přepínač řazení 7 (křížový)", "Перемикач перехресний", "Łącznik krzyżowy", "Переключатель перекрёстный"],
-"comp.button": ["Push button (1/0)", "Tlačítko řazení 1/0", "Кнопка", "Przycisk zwierny", "Кнопка"],
+"comp.switch1": ["Switch no. 1 (one-way)", "Vypínač řazení 1 (jednopólový)", "Вимикач № 1 (однополюсний)", "Łącznik nr 1 (jednobiegunowy)", "Выключатель № 1 (однополюсный)"],
+"comp.switch2": ["Switch no. 2 (two-pole)", "Vypínač řazení 2 (dvoupólový)", "Вимикач № 2 (двополюсний)", "Łącznik nr 2 (dwubiegunowy)", "Выключатель № 2 (двухполюсный)"],
+"comp.switch3": ["Switch no. 3 (three-pole)", "Vypínač řazení 3 (trojpólový)", "Вимикач № 3 (триполюсний)", "Łącznik nr 3 (trójbiegunowy)", "Выключатель № 3 (трёхполюсный)"],
+"comp.switch03": ["Switch no. 03 (three-pole + N)", "Vypínač řazení 03 (trojpólový s N)", "Вимикач № 03 (триполюсний + N)", "Łącznik nr 03 (trójbiegunowy + N)", "Выключатель № 03 (трёхполюсный + N)"],
+"comp.switch4": ["Switch no. 4 (group, 1-0-2)", "Přepínač řazení 4 (skupinový)", "Перемикач № 4 (груповий 1-0-2)", "Łącznik nr 4 (grupowy 1-0-2)", "Переключатель № 4 (групповой 1-0-2)"],
+"comp.switch5": ["Switch no. 5 (double, series)", "Vypínač řazení 5 (sériový, lustrový)", "Вимикач № 5 (двоклавішний)", "Łącznik nr 5 (świecznikowy)", "Выключатель № 5 (двухклавишный)"],
+"comp.switch5A": ["Switch no. 5A (double two-way, common L)", "Přepínač řazení 5A (sériový střídavý)", "Перемикач № 5A (двоклавішний прохідний, спільна L)", "Łącznik nr 5A (podwójny schodowy, wspólne L)", "Переключатель № 5A (двухклавишный проходной, общая L)"],
+"comp.switch66": ["Switch no. 5B / 6+6 (double two-way)", "Přepínač řazení 5B / 6+6 (dvojitý střídavý)", "Перемикач № 5B / 6+6 (подвійний прохідний)", "Łącznik nr 5B / 6+6 (podwójny schodowy)", "Переключатель № 5B / 6+6 (двойной проходной)"],
+"comp.switch6": ["Switch no. 6 (two-way)", "Přepínač řazení 6 (střídavý, schodišťový)", "Перемикач № 6 (прохідний)", "Łącznik nr 6 (schodowy)", "Переключатель № 6 (проходной)"],
+"comp.switch7": ["Switch no. 7 (intermediate)", "Přepínač řazení 7 (křížový)", "Перемикач № 7 (перехресний)", "Łącznik nr 7 (krzyżowy)", "Переключатель № 7 (перекрёстный)"],
+"comp.button": ["Push button no. 1/0", "Tlačítko řazení 1/0", "Кнопка № 1/0", "Przycisk nr 1/0", "Кнопка № 1/0"],
 "comp.dimmer": ["Dimmer", "Stmívač", "Димер", "Ściemniacz", "Диммер"],
 "comp.motionDetector": ["Motion detector (PIR)", "Pohybové čidlo (PIR)", "Датчик руху (PIR)", "Czujnik ruchu (PIR)", "Датчик движения (PIR)"],
 "comp.smartRelay": ["Smart relay", "Chytré relé", "Розумне реле", "Przekaźnik smart", "Умное реле"],

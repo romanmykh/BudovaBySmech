@@ -93,7 +93,7 @@ function ComponentNodeImpl(p: NodeProps): JSX.Element {
           state: p.state ?? {},
           meas: p.meas ?? {},
           live: p.live,
-        })}
+        }, comp.type)}
       </g>
 
       {/* terminals */}
@@ -138,6 +138,10 @@ function ComponentNodeImpl(p: NodeProps): JSX.Element {
           fill="var(--text)"
           fontWeight={600}
           pointerEvents="none"
+          stroke="var(--canvas)"
+          strokeWidth={3}
+          strokeLinejoin="round"
+          paintOrder="stroke"
         >
           {comp.label}
         </text>
@@ -150,6 +154,10 @@ function ComponentNodeImpl(p: NodeProps): JSX.Element {
           textAnchor="middle"
           fill="var(--text-dim)"
           pointerEvents="none"
+          stroke="var(--canvas)"
+          strokeWidth={3}
+          strokeLinejoin="round"
+          paintOrder="stroke"
         >
           {rating}
         </text>

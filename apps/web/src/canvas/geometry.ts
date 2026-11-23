@@ -1,4 +1,5 @@
-import { sizeOf, terminalsOf, type ComponentInstance, type TerminalDef, type Point } from '@budova/engine';
+import { sizeOf, terminalsOf, type ComponentInstance, type TerminalDef, type Point, type Wire } from '@budova/engine';
+import { routeAround, Occupancy, LEAD, type Obstacle } from './router.js';
 
 export const GRID = 10;
 
@@ -73,7 +74,7 @@ export function terminalPos(c: ComponentInstance, terminalId: string): TerminalP
 }
 
 /** A short stub leaving the terminal perpendicular to the device body. */
-function stub(p: TerminalPos, len = 12): Point {
+function stub(p: TerminalPos, len = LEAD): Point {
   switch (p.side) {
     case 'top':
       return { x: p.x, y: p.y - len };
@@ -184,4 +185,84 @@ export function terminalsCompatible(a: TerminalDef, b: TerminalDef, role: string
     }
   };
   return wants(a).includes(role) && wants(b).includes(role);
+}
+
+/* ------------------------------------------------------------------ */
+/* Whole-drawing routing                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Routes for every conductor. Conductors with manual bend points keep the
+ * route the user drew; all others are routed around the devices and off each
+ * other's runs. Short conductors are routed first so that they take the
+ * direct paths and the long runs go round them.
+ */
+export function routeAll(components: ComponentInstance[], wires: Wire[], auto = true): Map<string, Point[]> {
+  const byId = new Map(components.map((c) => [c.id, c]));
+  const out = new Map<string, Point[]>();
+  const obstacles: Obstacle[] = components.map((c) => ({ id: c.id, ...boxOf(c) }));
+
+  // Conductors joined at a terminal are one net and may share a run.
+  const parent = new Map<string, string>();
+  const find = (k: string): string => {
+    let r = k;
+    while (parent.get(r) && parent.get(r) !== r) r = parent.get(r)!;
+    parent.set(k, r);
+    return r;
+  };
+  const key = (e: { comp: string; terminal: string }) => `${e.comp}:${e.terminal}`;
+  for (const w of wires) {
+    const a = find(key(w.from));
+    const b = find(key(w.to));
+    if (a !== b) parent.set(a, b);
+  }
+
+  const jobs: Array<{ w: Wire; a: TerminalPos; b: TerminalPos; d: number }> = [];
+  const occ = new Occupancy();
+  for (const w of wires) {
+    const ca = byId.get(w.from.comp);
+    const cb = byId.get(w.to.comp);
+    if (!ca || !cb) continue;
+    const a = terminalPos(ca, w.from.terminal);
+    const b = terminalPos(cb, w.to.terminal);
+    if (!a || !b) continue;
+    if (!auto || (w.points?.length ?? 0) > 0) {
+      const pts = routeWire(a, b, w.points ?? []);
+      out.set(w.id, pts);
+      occ.add(pts, find(key(w.from)));
+      continue;
+    }
+    jobs.push({ w, a, b, d: Math.abs(a.x - b.x) + Math.abs(a.y - b.y) });
+  }
+  jobs.sort((p, q) => p.d - q.d);
+  for (const { w, a, b } of jobs) {
+    const net = find(key(w.from));
+    const pts = routeAround(a, b, obstacles, occ, net) ?? routeWire(a, b);
+    out.set(w.id, pts);
+    occ.add(pts, net);
+  }
+  return out;
+}
+
+/** SVG path with small rounded corners, the way a drawn schematic looks. */
+export function roundedPathOf(points: Point[], r = 4): string {
+  if (points.length < 3) return pathOf(points);
+  let d = `M${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const p0 = points[i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const l1 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    const l2 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const rr = Math.min(r, l1 / 2, l2 / 2);
+    if (rr < 0.5) {
+      d += ` L${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+      continue;
+    }
+    const a = { x: p1.x + ((p0.x - p1.x) / l1) * rr, y: p1.y + ((p0.y - p1.y) / l1) * rr };
+    const b = { x: p1.x + ((p2.x - p1.x) / l2) * rr, y: p1.y + ((p2.y - p1.y) / l2) * rr };
+    d += ` L${a.x.toFixed(1)} ${a.y.toFixed(1)} Q${p1.x.toFixed(1)} ${p1.y.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+  }
+  const last = points[points.length - 1];
+  return `${d} L${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
 }

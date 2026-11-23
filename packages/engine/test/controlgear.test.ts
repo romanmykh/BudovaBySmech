@@ -131,3 +131,51 @@ describe('pilot devices', () => {
     expect(pos).toEqual([1, 0, 2, 0]);
   });
 });
+
+describe('wall switches by arrangement number (řazení)', () => {
+  const lampBehind = (type: string, terms: { inL: string; outL: string; inN?: string; outN?: string }) => {
+    const b = new ProjectBuilder('sw', 's');
+    b.add('supply', 's1', { system: 'TN-S', phases: 1 }, {});
+    b.add(type, 'sw', {}, {});
+    b.add('lampE27', 'la', { watts: 60, classI: false }, {});
+    b.wire('s1.L1', `sw.${terms.inL}`, 'L1', 1.5, 1);
+    b.wire(`sw.${terms.outL}`, 'la.in.L', 'L1', 1.5, 1);
+    if (terms.inN) {
+      b.wire('s1.N', `sw.${terms.inN}`, 'N', 1.5, 1);
+      b.wire(`sw.${terms.outN}`, 'la.in.N', 'N', 1.5, 1);
+    } else b.wire('s1.N', 'la.in.N', 'N', 1.5, 1);
+    const sim = new Simulator(b.build());
+    sim.solve();
+    return { sim, lit: () => sim.results.meas['la'].brightness > 0.5 };
+  };
+
+  it('no. 2 switches both L and N', () => {
+    const { sim, lit } = lampBehind('switch2', { inL: 'in.L', outL: 'out.L', inN: 'in.N', outN: 'out.N' });
+    expect(lit()).toBe(false);
+    sim.operate('sw', 'toggle');
+    sim.solve();
+    expect(lit()).toBe(true);
+  });
+
+  it('no. 4 group switch goes 1 → 0 → 2 → 0', () => {
+    const { sim, lit } = lampBehind('switch4', { inL: 'c1', outL: 'c1.t1' });
+    const seq: boolean[] = [];
+    for (let i = 0; i < 4; i++) {
+      sim.operate('sw', 'toggle');
+      sim.solve();
+      seq.push(lit());
+    }
+    expect(seq).toEqual([true, false, false, false]);
+  });
+
+  it('no. 5A keys work independently from one supply', () => {
+    const { sim, lit } = lampBehind('switch5A', { inL: 'c1', outL: 'c2.t2' });
+    expect(lit()).toBe(false);
+    sim.operate('sw', 'toggleA');
+    sim.solve();
+    expect(lit()).toBe(false);
+    sim.operate('sw', 'toggleB');
+    sim.solve();
+    expect(lit()).toBe(true);
+  });
+});

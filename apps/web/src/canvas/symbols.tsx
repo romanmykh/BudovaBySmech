@@ -582,6 +582,59 @@ const SYMBOLS: Record<string, SymbolFn> = {
     );
   },
 
+  switchMulti: ({ w, h, state, live }) => {
+    // Poles of řazení 2 / 3 / 03, ganged by a dashed linkage.
+    const n = w === 60 ? 2 : w === 80 ? 3 : 4;
+    const xs = Array.from({ length: n }, (_, i) => Math.round(((i + 1) * w) / (n + 1)));
+    const on = !!state?.closed;
+    return (
+      <g>
+        {xs.map((x, i) => (
+          <g key={i}>
+            {line(x, h, x, h - 12)}
+            {line(x, 12, x, 0)}
+            <circle cx={x} cy={h - 12} r={1.8} fill="currentColor" stroke="none" />
+            {on
+              ? line(x, h - 12, x, 12, { stroke: live ? 'var(--ok)' : 'currentColor' })
+              : line(x, h - 12, x - 9, 16)}
+          </g>
+        ))}
+        {line(xs[0]! - (on ? 0 : 4), h / 2, xs[n - 1]! - (on ? 0 : 4), h / 2, { strokeDasharray: '2 2', strokeWidth: 0.8 })}
+      </g>
+    );
+  },
+
+  switch4: ({ h, state, live }) => {
+    const pos = Number(state?.pos3 ?? 0);
+    const tip = pos === 1 ? { x: 15, y: 12 } : pos === 2 ? { x: 45, y: 12 } : { x: 30, y: 14 };
+    return (
+      <g>
+        {line(30, h, 30, h - 12)}
+        <circle cx={30} cy={h - 12} r={2} fill="currentColor" stroke="none" />
+        {line(30, h - 12, tip.x, tip.y, { stroke: live && pos ? 'var(--ok)' : 'currentColor' })}
+        {line(15, 12, 15, 0)}
+        {line(45, 12, 45, 0)}
+        {text(30, 10, pos === 0 ? '0' : '', 7)}
+      </g>
+    );
+  },
+
+  switch5A: ({ h, state }) => {
+    const a = Number(state?.posA ?? 1);
+    const b = Number(state?.posB ?? 1);
+    return (
+      <g>
+        {line(45, h, 45, h - 10)}
+        {line(25, h - 10, 65, h - 10)}
+        <circle cx={25} cy={h - 10} r={2} fill="currentColor" stroke="none" />
+        <circle cx={65} cy={h - 10} r={2} fill="currentColor" stroke="none" />
+        {line(25, h - 10, a === 1 ? 15 : 35, 12)}
+        {line(65, h - 10, b === 1 ? 55 : 75, 12)}
+        {[15, 35, 55, 75].map((x) => <g key={x}>{line(x, 12, x, 0)}</g>)}
+      </g>
+    );
+  },
+
   switch7: ({ w, h, state }) => {
     const x = !!state?.crossed;
     return (
@@ -1009,9 +1062,25 @@ function genericSymbol({ w, h }: SymbolCtx): JSX.Element {
   );
 }
 
-export function renderSymbol(name: string, ctx: SymbolCtx): JSX.Element {
+/** Czech switch arrangement number (řazení), printed in the corner of the symbol. */
+const RAZENI: Record<string, string> = {
+  switch1: '1', switch5: '5', switch6: '6', switch66: '5B', switch7: '7', button: '1/0', switch4: '4', switch5A: '5A',
+};
+
+export function renderSymbol(name: string, ctx: SymbolCtx, type?: string): JSX.Element {
   const fn = SYMBOLS[name];
-  return fn ? fn(ctx) : genericSymbol(ctx);
+  const body = fn ? fn(ctx) : genericSymbol(ctx);
+  let r = RAZENI[type ?? name];
+  if (!r && name === 'switchMulti') r = ctx.w === 60 ? '2' : ctx.w === 80 ? '3' : '03';
+  if (!r) return body;
+  return (
+    <g>
+      {body}
+      <text x={ctx.w - 1} y={ctx.h - 2} fontSize={7} textAnchor="end" stroke="none" fill="var(--text-faint)">
+        {`č.${r}`}
+      </text>
+    </g>
+  );
 }
 
 export function hasSymbol(name: string): boolean {

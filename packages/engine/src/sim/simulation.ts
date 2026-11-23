@@ -196,13 +196,15 @@ export class Simulator {
           if (st.tripped) st.tripped = false;
           st.closed = !st.closed;
         } else if ('on' in st) st.on = !st.on;
+        else if ('a' in st) st.a = !st.a;
         break;
       case 'toggleB':
         if ('posB' in st) st.posB = st.posB === 1 ? 2 : 1;
         else if ('b' in st) st.b = !st.b;
         break;
       case 'toggleA':
-        if ('a' in st) st.a = !st.a;
+        if ('posA' in st) st.posA = st.posA === 1 ? 2 : 1;
+        else if ('a' in st) st.a = !st.a;
         break;
       case 'press':
         st.pressed = true;

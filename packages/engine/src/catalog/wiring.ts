@@ -1,4 +1,4 @@
-import type { ComponentDef, TerminalDef } from './types.js';
+import type { ComponentDef, TerminalDef, StampCtx } from './types.js';
 import { numOptions, strOptions, R_OPEN, R_CLOSED } from './common.js';
 import { loadImpedance } from '../physics/network.js';
 
@@ -23,6 +23,22 @@ function switchTerminals(commons: string[], ways: number, w: number, h: number):
   return out;
 }
 
+/** Multi-pole switch (řazení 2, 3, 03): every pole in at the bottom, out at the top. */
+function multiPoleTerminals(cond: string[], w: number, h: number): TerminalDef[] {
+  const out: TerminalDef[] = [];
+  cond.forEach((c, i) => {
+    const x = Math.round(((i + 1) * w) / (cond.length + 1));
+    const role = c === 'N' ? ('N' as const) : ('L' as const);
+    out.push({ id: `in.${c}`, role, mark: c, x, y: h, side: 'bottom' });
+    out.push({ id: `out.${c}`, role, mark: c, x, y: 0, side: 'top' });
+  });
+  return out;
+}
+
+function stampMultiPole(ctx: StampCtx, cond: string[]): void {
+  for (const c of cond) ctx.R(ctx.node(`in.${c}`), ctx.node(`out.${c}`), ctx.state.closed ? R_CLOSED : R_OPEN, `p.${c}`);
+}
+
 export const wiringDefs: ComponentDef[] = [
   {
     type: 'switch1',
@@ -42,6 +58,84 @@ export const wiringDefs: ComponentDef[] = [
     update: (ctx) => {
       ctx.meas('I', ctx.i('p1'));
       ctx.meas('closed', ctx.state.closed ? 1 : 0);
+    },
+  },
+  {
+    type: 'switch2',
+    category: 'wiring',
+    symbol: 'switchMulti',
+    size: () => ({ w: 60, h: 50 }),
+    interactive: 'toggle',
+    keywords: [...SWITCH_KEYWORDS, 'řazení 2', 'dvoupólový', 'two-pole', 'dwubiegunowy', 'двополюсний', 'двухполюсный'],
+    defaultProps: { inA: 10 },
+    props: [{ key: 'inA', type: 'select', options: numOptions([10, 16]), unit: 'A' }],
+    terminals: () => multiPoleTerminals(['L', 'N'], 60, 50),
+    initState: () => ({ closed: false }),
+    stamp: (ctx) => stampMultiPole(ctx, ['L', 'N']),
+    update: (ctx) => {
+      ctx.meas('I', ctx.i('p.L'));
+      ctx.meas('closed', ctx.state.closed ? 1 : 0);
+    },
+  },
+  {
+    type: 'switch3',
+    category: 'wiring',
+    symbol: 'switchMulti',
+    size: () => ({ w: 80, h: 50 }),
+    interactive: 'toggle',
+    keywords: [...SWITCH_KEYWORDS, 'řazení 3', 'trojpólový', 'three-pole', 'trójbiegunowy', 'трифазний', 'трёхполюсный'],
+    defaultProps: { inA: 16 },
+    props: [{ key: 'inA', type: 'select', options: numOptions([16, 25]), unit: 'A' }],
+    terminals: () => multiPoleTerminals(['L1', 'L2', 'L3'], 80, 50),
+    initState: () => ({ closed: false }),
+    stamp: (ctx) => stampMultiPole(ctx, ['L1', 'L2', 'L3']),
+    update: (ctx) => {
+      ctx.meas('I', Math.max(ctx.i('p.L1'), ctx.i('p.L2'), ctx.i('p.L3')));
+      ctx.meas('closed', ctx.state.closed ? 1 : 0);
+    },
+  },
+  {
+    type: 'switch03',
+    category: 'wiring',
+    symbol: 'switchMulti',
+    size: () => ({ w: 100, h: 50 }),
+    interactive: 'toggle',
+    keywords: [...SWITCH_KEYWORDS, 'řazení 03', 'trojpólový s N', 'three-pole + N', 'czterobiegunowy'],
+    defaultProps: { inA: 16 },
+    props: [{ key: 'inA', type: 'select', options: numOptions([16, 25]), unit: 'A' }],
+    terminals: () => multiPoleTerminals(['L1', 'L2', 'L3', 'N'], 100, 50),
+    initState: () => ({ closed: false }),
+    stamp: (ctx) => stampMultiPole(ctx, ['L1', 'L2', 'L3', 'N']),
+    update: (ctx) => {
+      ctx.meas('I', Math.max(ctx.i('p.L1'), ctx.i('p.L2'), ctx.i('p.L3')));
+      ctx.meas('closed', ctx.state.closed ? 1 : 0);
+    },
+  },
+  {
+    // Group switch: one input to either of two outputs, with an off position
+    // between them (0 → 1 → 0 → 2).
+    type: 'switch4',
+    category: 'wiring',
+    symbol: 'switch4',
+    size: () => ({ w: 60, h: 50 }),
+    interactive: 'toggle',
+    keywords: [...SWITCH_KEYWORDS, 'řazení 4', 'skupinový přepínač', 'group switch', 'grupowy'],
+    defaultProps: { inA: 10, positions: '1-0-2' },
+    props: [{ key: 'inA', type: 'select', options: numOptions([6, 10, 16]), unit: 'A' }],
+    terminals: () => [
+      { id: 'c1', role: 'L', mark: 'L', x: 30, y: 50, side: 'bottom' },
+      { id: 'c1.t1', role: 'L', mark: '1', x: 15, y: 0, side: 'top' },
+      { id: 'c1.t2', role: 'L', mark: '2', x: 45, y: 0, side: 'top' },
+    ],
+    initState: () => ({ pos3: 0, lastSide: 2 }),
+    stamp: (ctx) => {
+      const pos = Number(ctx.state.pos3) || 0;
+      ctx.R(ctx.node('c1'), ctx.node('c1.t1'), pos === 1 ? R_CLOSED : R_OPEN, 'p1');
+      ctx.R(ctx.node('c1'), ctx.node('c1.t2'), pos === 2 ? R_CLOSED : R_OPEN, 'p2');
+    },
+    update: (ctx) => {
+      ctx.meas('I', ctx.i('p1') + ctx.i('p2'));
+      ctx.meas('position', Number(ctx.state.pos3) || 0);
     },
   },
   {
@@ -68,6 +162,60 @@ export const wiringDefs: ComponentDef[] = [
     },
   },
   {
+    // Two two-way switches sharing one supply terminal (two keys).
+    type: 'switch5A',
+    category: 'wiring',
+    symbol: 'switch5A',
+    size: () => ({ w: 90, h: 50 }),
+    interactive: 'toggle',
+    keywords: [...SWITCH_KEYWORDS, 'řazení 5A', 'sériový přepínač střídavý', 'double two-way common'],
+    defaultProps: { inA: 10 },
+    props: [{ key: 'inA', type: 'select', options: numOptions([6, 10, 16]), unit: 'A' }],
+    terminals: () => [
+      { id: 'c1', role: 'L', mark: 'L', x: 45, y: 50, side: 'bottom' },
+      { id: 'c1.t1', role: 'L', mark: '1', x: 15, y: 0, side: 'top' },
+      { id: 'c1.t2', role: 'L', mark: '2', x: 35, y: 0, side: 'top' },
+      { id: 'c2.t1', role: 'L', mark: '3', x: 55, y: 0, side: 'top' },
+      { id: 'c2.t2', role: 'L', mark: '4', x: 75, y: 0, side: 'top' },
+    ],
+    initState: () => ({ posA: 1, posB: 1 }),
+    stamp: (ctx) => {
+      const a = Number(ctx.state.posA) === 2 ? 2 : 1;
+      const b = Number(ctx.state.posB) === 2 ? 2 : 1;
+      ctx.R(ctx.node('c1'), ctx.node('c1.t1'), a === 1 ? R_CLOSED : R_OPEN, 'a1');
+      ctx.R(ctx.node('c1'), ctx.node('c1.t2'), a === 2 ? R_CLOSED : R_OPEN, 'a2');
+      ctx.R(ctx.node('c1'), ctx.node('c2.t1'), b === 1 ? R_CLOSED : R_OPEN, 'b1');
+      ctx.R(ctx.node('c1'), ctx.node('c2.t2'), b === 2 ? R_CLOSED : R_OPEN, 'b2');
+    },
+  },
+  {
+    type: 'switch66',
+    category: 'wiring',
+    symbol: 'switch66',
+    size: () => ({ w: 90, h: 50 }),
+    interactive: 'toggle',
+    keywords: [...SWITCH_KEYWORDS, 'řazení 6+6', 'řazení 5B', 'dvojitý přepínač střídavý', 'double two-way'],
+    defaultProps: { inA: 10 },
+    props: [{ key: 'inA', type: 'select', options: numOptions([6, 10, 16]), unit: 'A' }],
+    terminals: () => [
+      { id: 'c1', role: 'L', mark: 'L1', x: 25, y: 50, side: 'bottom' },
+      { id: 'c1.t1', role: 'L', mark: '1', x: 15, y: 0, side: 'top' },
+      { id: 'c1.t2', role: 'L', mark: '2', x: 35, y: 0, side: 'top' },
+      { id: 'c2', role: 'L', mark: 'L2', x: 65, y: 50, side: 'bottom' },
+      { id: 'c2.t1', role: 'L', mark: '3', x: 55, y: 0, side: 'top' },
+      { id: 'c2.t2', role: 'L', mark: '4', x: 75, y: 0, side: 'top' },
+    ],
+    initState: () => ({ posA: 1, posB: 1 }),
+    stamp: (ctx) => {
+      const a = Number(ctx.state.posA) === 2 ? 2 : 1;
+      const b = Number(ctx.state.posB) === 2 ? 2 : 1;
+      ctx.R(ctx.node('c1'), ctx.node('c1.t1'), a === 1 ? R_CLOSED : R_OPEN, 'a1');
+      ctx.R(ctx.node('c1'), ctx.node('c1.t2'), a === 2 ? R_CLOSED : R_OPEN, 'a2');
+      ctx.R(ctx.node('c2'), ctx.node('c2.t1'), b === 1 ? R_CLOSED : R_OPEN, 'b1');
+      ctx.R(ctx.node('c2'), ctx.node('c2.t2'), b === 2 ? R_CLOSED : R_OPEN, 'b2');
+    },
+  },
+  {
     type: 'switch6',
     category: 'wiring',
     symbol: 'switch6',
@@ -90,33 +238,6 @@ export const wiringDefs: ComponentDef[] = [
     update: (ctx) => {
       ctx.meas('I', ctx.i('p1') + ctx.i('p2'));
       ctx.meas('pos', Number(ctx.state.pos) || 1);
-    },
-  },
-  {
-    type: 'switch66',
-    category: 'wiring',
-    symbol: 'switch66',
-    size: () => ({ w: 90, h: 50 }),
-    interactive: 'toggle',
-    keywords: [...SWITCH_KEYWORDS, 'řazení 6+6', 'double two-way'],
-    defaultProps: { inA: 10 },
-    props: [{ key: 'inA', type: 'select', options: numOptions([6, 10, 16]), unit: 'A' }],
-    terminals: () => [
-      { id: 'c1', role: 'L', mark: 'L1', x: 25, y: 50, side: 'bottom' },
-      { id: 'c1.t1', role: 'L', mark: '1', x: 15, y: 0, side: 'top' },
-      { id: 'c1.t2', role: 'L', mark: '2', x: 35, y: 0, side: 'top' },
-      { id: 'c2', role: 'L', mark: 'L2', x: 65, y: 50, side: 'bottom' },
-      { id: 'c2.t1', role: 'L', mark: '3', x: 55, y: 0, side: 'top' },
-      { id: 'c2.t2', role: 'L', mark: '4', x: 75, y: 0, side: 'top' },
-    ],
-    initState: () => ({ posA: 1, posB: 1 }),
-    stamp: (ctx) => {
-      const a = Number(ctx.state.posA) === 2 ? 2 : 1;
-      const b = Number(ctx.state.posB) === 2 ? 2 : 1;
-      ctx.R(ctx.node('c1'), ctx.node('c1.t1'), a === 1 ? R_CLOSED : R_OPEN, 'a1');
-      ctx.R(ctx.node('c1'), ctx.node('c1.t2'), a === 2 ? R_CLOSED : R_OPEN, 'a2');
-      ctx.R(ctx.node('c2'), ctx.node('c2.t1'), b === 1 ? R_CLOSED : R_OPEN, 'b1');
-      ctx.R(ctx.node('c2'), ctx.node('c2.t2'), b === 2 ? R_CLOSED : R_OPEN, 'b2');
     },
   },
   {

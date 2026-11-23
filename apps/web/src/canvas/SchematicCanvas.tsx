@@ -17,6 +17,9 @@ import { AUTO_ROLE, inferRole } from './autoRole.js';
 import { setViewCenter, onFocusRequest } from './viewport.js';
 import { useIsMobile, useIsTouch } from '../hooks/useMediaQuery.js';
 
+/** Switches with two keys, each operated by its own half of the symbol. */
+const TWO_KEY = new Set(['switch5', 'switch66', 'switch5A']);
+
 interface Pending {
   comp: string;
   terminal: string;
@@ -57,6 +60,8 @@ export function SchematicCanvas(): JSX.Element {
   const [cursor, setCursor] = useState<Point>({ x: 0, y: 0 });
   const [marquee, setMarquee] = useState<Box | null>(null);
   const drag = useRef<Drag | null>(null);
+  /** True while a device or a bend is being dragged, for cheap conductor routes. */
+  const [dragging, setDragging] = useState(false);
 
   /* ---------------- coordinate helpers ---------------- */
 
@@ -188,6 +193,11 @@ export function SchematicCanvas(): JSX.Element {
           window.addEventListener('pointerup', up);
         } else if (def.interactive === 'plug') {
           operate(id, 'toggle');
+        } else if (comp && TWO_KEY.has(comp.type)) {
+          // A two-key switch: the left key works one pole, the right key the other.
+          const at = toWorld(e.clientX, e.clientY);
+          const b = boxOf(comp);
+          operate(id, at.x - b.x < b.w / 2 ? 'toggleA' : 'toggleB');
         } else {
           operate(id, 'toggle');
         }
@@ -198,7 +208,7 @@ export function SchematicCanvas(): JSX.Element {
       drag.current = { kind: 'move', startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false };
       (e.target as Element).setPointerCapture?.(e.pointerId);
     },
-    [project.components, running, operate, selection, store, ui.mode],
+    [project.components, running, operate, selection, store, ui.mode, toWorld],
   );
 
   const onSvgPointerDown = useCallback(
@@ -253,6 +263,7 @@ export function SchematicCanvas(): JSX.Element {
       if (d.kind === 'pan') {
         setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }));
       } else if (d.kind === 'move') {
+        if (!dragging) setDragging(true);
         store.getState().moveSelection(dx / view.zoom, dy / view.zoom, false);
       } else if (d.kind === 'select') {
         const start = toWorld(d.startX, d.startY);
@@ -282,12 +293,13 @@ export function SchematicCanvas(): JSX.Element {
         }
       }
     },
-    [toWorld, view.zoom, store, project.wires, ui.snap],
+    [toWorld, view.zoom, store, project.wires, ui.snap, dragging],
   );
 
   const onPointerUp = useCallback((e?: React.PointerEvent) => {
     const d = drag.current;
     drag.current = null;
+    setDragging(false);
     if (!d) return;
     if (d.kind === 'move') {
       if (d.moved) {
@@ -551,6 +563,7 @@ export function SchematicCanvas(): JSX.Element {
             selected={selectedWires}
             highlighted={ui.highlightWires}
             live={running}
+            dragging={dragging}
             showLabels={view.zoom > 1.6 && !running}
             showCurrents={running && view.zoom > 0.95}
             onSelect={(e, id) => {

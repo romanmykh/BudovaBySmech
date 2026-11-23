@@ -83,7 +83,7 @@ const DESIGNATION: Record<string, string> = {
   contactor: 'KM', motorContactor: 'KM', controlRelay: 'K', timeRelay: 'KT', impulseRelay: 'KR',
   stairTimer: 'KT', pushButton: 'SB', selectorSwitch: 'SA', emergencyStop: 'SB', limitSwitch: 'SQ',
   signalLamp: 'HL', overloadRelay: 'FR', motor3f: 'M', switch1: 'S', switch5: 'S', switch6: 'S', switch7: 'S',
-  button: 'S', lampE27: 'E', ledPanel: 'E', socket16: 'XS',
+  button: 'S', switch2: 'S', switch3: 'S', switch03: 'S', switch4: 'S', switch5A: 'S', switch66: 'S', lampE27: 'E', ledPanel: 'E', socket16: 'XS',
 };
 
 function newEmpty(): Project {

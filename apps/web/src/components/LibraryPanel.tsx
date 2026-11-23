@@ -4,10 +4,11 @@ import { ALL_DEFS, CATEGORIES, getDef, sizeOf, type ComponentDef } from '@budova
 import { useProject } from '../store/project.js';
 import { useUi } from '../store/ui.js';
 import { nextPlacement, focusOn } from '../canvas/viewport.js';
+import { boxOf } from '../canvas/geometry.js';
 
 /** The parts used in almost every basic drawing, shown first. */
 const BASIC = [
-  'mcb', 'rcd', 'rcbo', 'switch1', 'switch6', 'button', 'socket16', 'lampE27',
+  'mcb', 'rcd', 'rcbo', 'switch1', 'switch5', 'switch6', 'switch7', 'button', 'socket16', 'lampE27',
   'contactor', 'motorContactor', 'controlRelay', 'timeRelay', 'pushButton', 'overloadRelay', 'motor3f', 'signalLamp',
 ];
 
@@ -39,9 +40,9 @@ export function LibraryPanel(): JSX.Element {
   }, [query, t]);
 
   const place = (type: string) => {
-    const at = nextPlacement();
-    addComponent(type, at.x, at.y);
     const size = sizeOf(type, undefined);
+    const at = nextPlacement(size.w, size.h, useProject.getState().project.components.map(boxOf));
+    addComponent(type, at.x, at.y);
     // Too small to tap its terminals? Zoom in on it.
     requestAnimationFrame(() => focusOn(at.x + size.w / 2, at.y + size.h / 2));
     const ui = useUi.getState();
